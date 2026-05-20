@@ -34,6 +34,7 @@ export default function SignupPage() {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [emailTakenError, setEmailTakenError] = useState(false);
 
   // ── Validation ──
   const nameError = (() => {
@@ -85,6 +86,7 @@ export default function SignupPage() {
     if (!isValid) return;
 
     setServerError(null);
+    setEmailTakenError(false);
     setLoading(true);
 
     // Check duplicate email server-side before hitting Supabase Auth
@@ -96,7 +98,8 @@ export default function SignupPage() {
       });
       const checkData = await checkRes.json();
       if (checkData.exists) {
-        setServerError("An account with this email already exists. Sign in instead?");
+        setEmailTakenError(true);
+        touch("email");
         setLoading(false);
         return;
       }
@@ -183,19 +186,31 @@ export default function SignupPage() {
               type="email"
               autoComplete="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setEmailTakenError(false); }}
               onBlur={() => touch("email")}
               placeholder="you@university.edu"
-              {...fieldClass(emailError, !!touched.email)}
+              {...fieldClass(emailError || emailTakenError ? "err" : null, !!touched.email || emailTakenError)}
             />
-            {emailError && (
+            {emailTakenError ? (
+              <p className="mt-1.5 text-xs text-red-400 flex items-start gap-1">
+                <svg className="w-3 h-3 flex-shrink-0 mt-px" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <span>
+                  An account with this email already exists.{" "}
+                  <Link href="/login" className="underline underline-offset-2 hover:text-red-300 transition-colors font-medium">
+                    Sign in instead
+                  </Link>
+                </span>
+              </p>
+            ) : emailError ? (
               <p className="mt-1.5 text-xs text-red-400 flex items-center gap-1">
                 <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
                 {emailError}
               </p>
-            )}
+            ) : null}
           </div>
 
           {/* Password */}
