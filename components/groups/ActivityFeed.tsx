@@ -41,25 +41,25 @@ export default function ActivityFeed({ groupId }: Props) {
       .then((d) => { setLogs(d.logs ?? []); setLoading(false); });
   }, [groupId]);
 
-  if (loading) return <div className="text-center py-16 text-gray-400 text-sm">Loading…</div>;
-  if (logs.length === 0) return <div className="text-center py-16 text-gray-400 text-sm">No activity yet.</div>;
+  if (loading) return <div className="text-center py-16 text-gray-500 text-sm">Loading…</div>;
+  if (logs.length === 0) return <div className="text-center py-16 text-gray-500 text-sm">No activity yet.</div>;
 
   return (
     <div className="space-y-1">
-      <h2 className="font-semibold text-gray-900 mb-4">Activity</h2>
+      <h2 className="font-semibold text-gray-100 mb-4">Activity</h2>
       {logs.map((log) => {
         const name = log.users?.full_name ?? log.users?.email?.split("@")[0] ?? "Someone";
         const icon = ACTION_ICON[log.action_type] ?? "•";
         return (
-          <div key={log.id} className="flex items-start gap-3 px-4 py-3 bg-white rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">
+          <div key={log.id} className="flex items-start gap-3 px-4 py-3 bg-gray-900 rounded-xl border border-[#1E2A3A] hover:border-[#2D3F55] transition-all duration-150">
             <span className="text-base flex-shrink-0 mt-0.5">{icon}</span>
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-gray-800">
-                <span className="font-medium">{name}</span>{" "}
+              <p className="text-sm text-gray-300">
+                <span className="font-medium text-gray-100">{name}</span>{" "}
                 {log.description ?? log.action_type.replace(/_/g, " ")}
               </p>
             </div>
-            <span className="text-xs text-gray-400 flex-shrink-0">{relTime(log.created_at)}</span>
+            <span className="text-xs text-gray-500 flex-shrink-0">{relTime(log.created_at)}</span>
           </div>
         );
       })}

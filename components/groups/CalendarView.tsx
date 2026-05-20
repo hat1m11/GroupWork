@@ -57,24 +57,24 @@ export default function CalendarView({ tasks }: Props) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-gray-900">{MONTHS[month]} {year}</h2>
+        <h2 className="font-semibold text-gray-100">{MONTHS[month]} {year}</h2>
         <div className="flex gap-1">
-          <button onClick={prevMonth} className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors">‹</button>
-          <button onClick={() => { setYear(now.getFullYear()); setMonth(now.getMonth()); setSelected(null); }} className="px-3 py-1 text-xs rounded-lg bg-indigo-50 text-indigo-600 font-medium hover:bg-indigo-100 transition-colors">Today</button>
-          <button onClick={nextMonth} className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors">›</button>
+          <button onClick={prevMonth} className="p-2 rounded-lg hover:bg-[#1E2A3A] text-gray-400 hover:text-gray-200 transition-all duration-150">‹</button>
+          <button onClick={() => { setYear(now.getFullYear()); setMonth(now.getMonth()); setSelected(null); }} className="px-3 py-1 text-xs rounded-lg bg-blue-500/10 text-blue-400 font-medium hover:bg-blue-500/20 transition-all duration-150">Today</button>
+          <button onClick={nextMonth} className="p-2 rounded-lg hover:bg-[#1E2A3A] text-gray-400 hover:text-gray-200 transition-all duration-150">›</button>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-        <div className="grid grid-cols-7 border-b border-gray-100">
+      <div className="bg-gray-900 rounded-xl border border-[#1E2A3A] overflow-hidden">
+        <div className="grid grid-cols-7 border-b border-[#1E2A3A]">
           {DOW.map((d) => (
-            <div key={d} className="text-center text-xs font-medium text-gray-400 py-2">{d}</div>
+            <div key={d} className="text-center text-xs font-medium text-gray-600 py-2">{d}</div>
           ))}
         </div>
 
         <div className="grid grid-cols-7">
           {Array.from({ length: firstDay }).map((_, i) => (
-            <div key={`empty-${i}`} className="min-h-[80px] border-b border-r border-gray-50" />
+            <div key={`empty-${i}`} className="min-h-[80px] border-b border-r border-[#1E2A3A]" />
           ))}
           {Array.from({ length: days }).map((_, i) => {
             const day = i + 1;
@@ -87,27 +87,27 @@ export default function CalendarView({ tasks }: Props) {
               <div
                 key={day}
                 onClick={() => setSelected(isSelected ? null : ds)}
-                className={`min-h-[80px] border-b border-r border-gray-50 p-1.5 cursor-pointer transition-colors ${
-                  isSelected ? "bg-indigo-50" : isToday ? "bg-amber-50/50" : "hover:bg-gray-50"
+                className={`min-h-[80px] border-b border-r border-[#1E2A3A] p-1.5 cursor-pointer transition-colors ${
+                  isSelected ? "bg-blue-500/10" : isToday ? "bg-amber-500/5" : "hover:bg-[#1E2A3A]/50"
                 }`}
               >
                 <span className={`text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full mb-1 ${
-                  isToday ? "bg-indigo-600 text-white" : "text-gray-700"
+                  isToday ? "bg-blue-500 text-white" : "text-gray-500"
                 }`}>
                   {day}
                 </span>
                 <div className="space-y-0.5">
                   {dayTasks.slice(0, 2).map((t) => (
                     <div key={t.id} className={`text-xs truncate rounded px-1 py-0.5 ${
-                      t.priority === "urgent" ? "bg-red-100 text-red-700" :
-                      t.priority === "high" ? "bg-amber-100 text-amber-700" :
-                      "bg-indigo-100 text-indigo-700"
+                      t.priority === "urgent" ? "bg-red-500/10 text-red-400" :
+                      t.priority === "high" ? "bg-amber-500/10 text-amber-400" :
+                      "bg-blue-500/10 text-blue-400"
                     }`}>
                       {t.title}
                     </div>
                   ))}
                   {dayTasks.length > 2 && (
-                    <p className="text-xs text-gray-400">+{dayTasks.length - 2} more</p>
+                    <p className="text-xs text-gray-600">+{dayTasks.length - 2} more</p>
                   )}
                 </div>
               </div>
@@ -117,14 +117,14 @@ export default function CalendarView({ tasks }: Props) {
       </div>
 
       {selected && selectedTasks.length > 0 && (
-        <div className="bg-white rounded-xl border border-indigo-200 p-4 space-y-2">
-          <h3 className="text-sm font-semibold text-gray-900">
+        <div className="bg-gray-900 rounded-xl border border-blue-500/20 p-4 space-y-2">
+          <h3 className="text-sm font-semibold text-gray-100">
             {new Date(selected).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
           </h3>
           {selectedTasks.map((t) => (
             <div key={t.id} className="flex items-center gap-3 text-sm">
-              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${t.status === "done" ? "bg-green-400" : "bg-indigo-400"}`} />
-              <span className={`flex-1 ${t.status === "done" ? "line-through text-gray-400" : "text-gray-800"}`}>{t.title}</span>
+              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${t.status === "done" ? "bg-emerald-400" : "bg-blue-400"}`} />
+              <span className={`flex-1 ${t.status === "done" ? "line-through text-gray-600" : "text-gray-200"}`}>{t.title}</span>
               <PriorityBadge priority={t.priority} />
             </div>
           ))}
@@ -132,7 +132,7 @@ export default function CalendarView({ tasks }: Props) {
       )}
 
       {selected && selectedTasks.length === 0 && (
-        <p className="text-sm text-gray-400 text-center">No tasks due on this date.</p>
+        <p className="text-sm text-gray-500 text-center">No tasks due on this date.</p>
       )}
     </div>
   );

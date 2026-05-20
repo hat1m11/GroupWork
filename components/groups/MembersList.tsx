@@ -15,6 +15,18 @@ function formatLastActive(iso: string | null): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
+function getInitials(name: string): string {
+  return name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "?";
+}
+
+const AVATAR_COLORS = [
+  "bg-blue-500/20 border-blue-500/30 text-blue-400",
+  "bg-purple-500/20 border-purple-500/30 text-purple-400",
+  "bg-emerald-500/20 border-emerald-500/30 text-emerald-400",
+  "bg-amber-500/20 border-amber-500/30 text-amber-400",
+  "bg-pink-500/20 border-pink-500/30 text-pink-400",
+];
+
 interface Props {
   groupId: string;
   members: MemberWithPresence[];
@@ -32,26 +44,37 @@ export default function MembersList({ groupId, members: initial, currentUserId, 
   }
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
-      {members.map((m) => {
-        const name = m.users?.full_name ?? m.users?.email ?? "Unknown";
+    <div className="flex items-center gap-3 flex-wrap">
+      {members.map((m, idx) => {
+        const displayName = m.users?.full_name ?? m.users?.email?.split("@")[0] ?? "Unknown";
         const lastActive = formatLastActive(m.last_active_at);
         const canRemove = isOwner && m.user_id !== currentUserId;
+        const avatarColor = AVATAR_COLORS[idx % AVATAR_COLORS.length];
+        const initials = getInitials(displayName);
 
         return (
-          <div key={m.user_id} className="flex items-center gap-1 group">
-            <span className="text-xs bg-gray-100 text-gray-700 rounded-full px-3 py-1 flex items-center gap-1.5">
-              {name}
-              {m.role === "owner" && <span className="text-gray-400">(owner)</span>}
+          <div key={m.user_id} className="flex items-center gap-2 group">
+            <div className={`w-7 h-7 rounded-full border flex items-center justify-center flex-shrink-0 ${avatarColor}`}>
+              <span className="text-xs font-semibold">{initials}</span>
+            </div>
+            <div className="flex flex-col leading-tight">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-medium text-gray-300">{displayName}</span>
+                {m.role === "owner" && (
+                  <span className="text-[10px] bg-purple-500/10 text-purple-400 rounded-full px-1.5 py-px font-medium leading-none">
+                    owner
+                  </span>
+                )}
+              </div>
               {lastActive && (
-                <span className="text-gray-400 hidden sm:inline">· {lastActive}</span>
+                <span className="text-[10px] text-gray-600">{lastActive}</span>
               )}
-            </span>
+            </div>
             {canRemove && (
               <button
-                onClick={() => handleRemove(m.user_id, name)}
-                className="text-gray-300 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 text-sm leading-none -ml-1"
-                title={`Remove ${name}`}
+                onClick={() => handleRemove(m.user_id, displayName)}
+                className="text-gray-700 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 text-sm leading-none"
+                title={`Remove ${displayName}`}
               >
                 ×
               </button>

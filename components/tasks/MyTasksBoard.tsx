@@ -73,7 +73,7 @@ export default function MyTasksBoard({ tasks: initial, currentUserId }: Props) {
 
   if (tasks.length === 0) {
     return (
-      <div className="text-center py-20 text-gray-400">
+      <div className="text-center py-20 text-gray-500">
         No tasks assigned to you yet.
       </div>
     );
@@ -86,10 +86,10 @@ export default function MyTasksBoard({ tasks: initial, currentUserId }: Props) {
           <button
             key={m}
             onClick={() => setMode(m)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 ${
               mode === m
-                ? "bg-indigo-600 text-white"
-                : "bg-white border border-gray-200 text-gray-600 hover:border-indigo-300"
+                ? "bg-blue-500 text-white"
+                : "bg-transparent border border-[#1E2A3A] text-gray-400 hover:border-blue-500/50 hover:text-blue-400"
             }`}
           >
             {m === "status" ? "By status" : "By due date"}
@@ -102,9 +102,9 @@ export default function MyTasksBoard({ tasks: initial, currentUserId }: Props) {
         if (items.length === 0) return null;
         return (
           <div key={key}>
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
               {mode === "status" ? STATUS_LABEL[key as Task["status"]] : key}
-              <span className="ml-2 text-gray-300 font-normal normal-case">
+              <span className="ml-2 text-gray-600 font-normal normal-case">
                 {items.length}
               </span>
             </h3>
@@ -117,29 +117,29 @@ export default function MyTasksBoard({ tasks: initial, currentUserId }: Props) {
                 return (
                   <div
                     key={task.id}
-                    className={`bg-white rounded-xl border px-4 py-3 flex items-center gap-3 shadow-sm ${
+                    className={`bg-gray-900 rounded-xl border px-4 py-3 flex items-center gap-3 transition-all duration-150 ${
                       task.status === "done"
-                        ? "border-green-100 opacity-70"
+                        ? "border-[#1E2A3A] opacity-60"
                         : isOverdue
-                        ? "border-red-200"
-                        : "border-gray-200"
+                        ? "border-red-500/30"
+                        : "border-[#1E2A3A] hover:border-[#2D3F55]"
                     }`}
                   >
                     <button
                       onClick={() => cycleStatus(task.id, task.status)}
-                      className={`flex-shrink-0 w-5 h-5 rounded-full border-2 transition-colors ${
+                      className={`flex-shrink-0 w-5 h-5 rounded-full border-2 transition-all duration-150 ${
                         task.status === "done"
-                          ? "bg-green-500 border-green-500"
+                          ? "bg-emerald-500 border-emerald-500"
                           : task.status === "in_progress"
-                          ? "border-indigo-400 bg-indigo-100"
-                          : "border-gray-300 hover:border-indigo-400"
+                          ? "border-blue-400 bg-blue-500/10"
+                          : "border-gray-600 hover:border-blue-400"
                       }`}
                       title="Cycle status"
                     />
                     <div className="flex-1 min-w-0">
                       <p
-                        className={`text-sm font-medium text-gray-900 truncate ${
-                          task.status === "done" ? "line-through text-gray-400" : ""
+                        className={`text-sm font-medium truncate ${
+                          task.status === "done" ? "line-through text-gray-500" : "text-gray-100"
                         }`}
                       >
                         {task.title}
@@ -149,7 +149,7 @@ export default function MyTasksBoard({ tasks: initial, currentUserId }: Props) {
                         {task.groups && (
                           <Link
                             href={`/groups/${task.groups.id}`}
-                            className="text-xs text-indigo-600 hover:underline bg-indigo-50 rounded px-1.5 py-0.5"
+                            className="text-xs text-blue-400 hover:text-blue-300 bg-blue-500/10 rounded px-1.5 py-0.5 transition-colors"
                           >
                             {task.groups.course_code} · {task.groups.name}
                           </Link>
@@ -158,8 +158,8 @@ export default function MyTasksBoard({ tasks: initial, currentUserId }: Props) {
                           <span
                             className={`text-xs rounded-full px-2 py-0.5 ${
                               isOverdue
-                                ? "bg-red-100 text-red-600"
-                                : "bg-gray-100 text-gray-500"
+                                ? "bg-red-500/10 text-red-400"
+                                : "bg-gray-800 text-gray-500"
                             }`}
                           >
                             {new Date(task.due_date).toLocaleDateString("en-GB", {
@@ -173,7 +173,7 @@ export default function MyTasksBoard({ tasks: initial, currentUserId }: Props) {
                     {task.groups && (
                       <Link
                         href={`/groups/${task.groups.id}`}
-                        className="text-gray-300 hover:text-indigo-500 transition-colors flex-shrink-0"
+                        className="text-gray-600 hover:text-blue-400 transition-colors flex-shrink-0"
                         title="Open group"
                       >
                         →

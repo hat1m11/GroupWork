@@ -14,16 +14,16 @@ export default function InviteCodeBadge({ code }: { code: string }) {
   return (
     <button
       onClick={copy}
-      className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-2.5 hover:border-indigo-300 transition-colors group"
+      className="flex items-center gap-2 bg-gray-900 border border-[#1E2A3A] rounded-xl px-4 py-2.5 hover:border-[#2D3F55] transition-all duration-150 group"
       title="Copy invite code"
     >
       <div className="text-left">
-        <p className="text-xs text-gray-400 font-medium">Invite code</p>
-        <p className="text-lg font-mono font-bold text-gray-900 tracking-widest">
+        <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Invite code</p>
+        <p className="text-lg font-mono font-bold text-gray-100 tracking-widest">
           {code}
         </p>
       </div>
-      <span className="text-gray-400 group-hover:text-indigo-500 transition-colors text-sm">
+      <span className="text-gray-600 group-hover:text-blue-400 transition-colors text-sm">
         {copied ? "✓" : "⧉"}
       </span>
     </button>

@@ -38,24 +38,24 @@ export default function GroupNotes({ groupId }: Props) {
     debounceRef.current = setTimeout(() => save(value), 1500);
   }
 
-  if (loading) return <div className="text-center py-16 text-gray-400 text-sm">Loading…</div>;
+  if (loading) return <div className="text-center py-16 text-gray-500 text-sm">Loading…</div>;
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-gray-900">Group Notes</h2>
-        <span className="text-xs text-gray-400">
+        <h2 className="font-semibold text-gray-100">Group Notes</h2>
+        <span className="text-xs text-gray-500">
           {saving ? "Saving…" : saved ? "✓ Saved" : "Auto-saves as you type"}
         </span>
       </div>
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-gray-500">
         Shared space for meeting notes, research, the brief — anything the whole group needs.
       </p>
       <textarea
         value={content}
         onChange={(e) => handleChange(e.target.value)}
         placeholder="Start typing… paste your brief, meeting notes, research links. Auto-saved."
-        className="w-full min-h-[400px] rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 resize-y font-mono leading-relaxed"
+        className="w-full min-h-[400px] rounded-xl bg-[#0D1424] border border-[#1E2A3A] px-4 py-3 text-sm text-gray-50 placeholder-gray-600 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/15 resize-y font-mono leading-relaxed transition-all"
       />
     </div>
   );

@@ -13,7 +13,8 @@ export default function PrioritySelect({ value, onChange, className = "" }: Prop
     <select
       value={value}
       onChange={(e) => onChange(e.target.value as Task["priority"])}
-      className={`rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 ${className}`}
+      className={`rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/15 transition-all ${className}`}
+      style={{ background: "var(--ct-in)", borderColor: "var(--ct-bd)", color: "var(--ct-t1)" }}
     >
       {priorities.map((p) => (
         <option key={p} value={p}>

@@ -20,13 +20,13 @@ export default function ChatMessage({ message, isOwn }: Props) {
       <div
         className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm break-words ${
           isOwn
-            ? "bg-indigo-600 text-white rounded-br-sm"
-            : "bg-gray-100 text-gray-900 rounded-bl-sm"
+            ? "bg-blue-500 text-white rounded-br-sm"
+            : "bg-[#1E2A3A] text-gray-100 rounded-bl-sm"
         }`}
       >
         {message.content}
       </div>
-      <span className="text-xs text-gray-300 px-1">{formatTime(message.created_at)}</span>
+      <span className="text-xs text-gray-600 px-1">{formatTime(message.created_at)}</span>
     </div>
   );
 }

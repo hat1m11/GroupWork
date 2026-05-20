@@ -19,8 +19,8 @@ export default async function MyTasksPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">My Tasks</h1>
-        <p className="text-gray-500 mt-1 text-sm">All tasks assigned to you across your groups.</p>
+        <h1 className="text-2xl font-bold text-gray-50 tracking-tight">My Tasks</h1>
+        <p className="text-gray-400 mt-1 text-sm">All tasks assigned to you across your groups.</p>
       </div>
       <MyTasksBoard
         tasks={(tasks ?? []) as TaskWithGroup[]}
