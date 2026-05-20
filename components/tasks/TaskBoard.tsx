@@ -112,34 +112,75 @@ export default function TaskBoard({
   return (
     <div className="space-y-6">
       {/* Toolbar */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <select
-          value={filterPriority}
-          onChange={(e) => setFilterPriority(e.target.value as Task["priority"] | "")}
-          className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none bg-white"
+      <div className="flex items-center gap-2 flex-wrap bg-white border border-gray-200 rounded-xl px-3 py-2.5">
+        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide mr-1">Filter:</span>
+
+        {/* Priority pills */}
+        {(["", "urgent", "high", "medium", "low"] as const).map((p) => (
+          <button
+            key={p}
+            onClick={() => setFilterPriority(p as Task["priority"] | "")}
+            className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors border ${
+              filterPriority === p
+                ? "bg-indigo-600 text-white border-indigo-600"
+                : "bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:text-indigo-600"
+            }`}
+          >
+            {p === "" ? "All priorities" : p.charAt(0).toUpperCase() + p.slice(1)}
+          </button>
+        ))}
+
+        <div className="w-px h-4 bg-gray-200 mx-1" />
+
+        {/* Tag pills */}
+        {ALL_TAGS.map((t) => (
+          <button
+            key={t}
+            onClick={() => setFilterTag(filterTag === t ? "" : t)}
+            className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors border ${
+              filterTag === t
+                ? "bg-indigo-600 text-white border-indigo-600"
+                : "bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:text-indigo-600"
+            }`}
+          >
+            {t}
+          </button>
+        ))}
+
+        <div className="w-px h-4 bg-gray-200 mx-1" />
+
+        <button
+          onClick={() => setSortByPriority((v) => !v)}
+          className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors border flex items-center gap-1 ${
+            sortByPriority
+              ? "bg-indigo-600 text-white border-indigo-600"
+              : "bg-white text-gray-600 border-gray-200 hover:border-indigo-300"
+          }`}
+          title="Sort tasks by priority within each column"
         >
-          <option value="">All priorities</option>
-          <option value="urgent">Urgent</option>
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
-        </select>
-        <select
-          value={filterTag}
-          onChange={(e) => setFilterTag(e.target.value)}
-          className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none bg-white"
+          ↑ Priority order
+        </button>
+        <button
+          onClick={() => setHideBlocked((v) => !v)}
+          className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors border flex items-center gap-1 ${
+            hideBlocked
+              ? "bg-orange-500 text-white border-orange-500"
+              : "bg-white text-gray-600 border-gray-200 hover:border-orange-300"
+          }`}
+          title="Hide blocked tasks from the board"
         >
-          <option value="">All labels</option>
-          {ALL_TAGS.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
-          <input type="checkbox" checked={sortByPriority} onChange={(e) => setSortByPriority(e.target.checked)} className="rounded" />
-          Sort by priority
-        </label>
-        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
-          <input type="checkbox" checked={hideBlocked} onChange={(e) => setHideBlocked(e.target.checked)} className="rounded" />
-          Hide blocked
-        </label>
+          ⛔ Hide blocked
+        </button>
+
+        {(filterPriority !== "" || filterTag !== "" || sortByPriority || hideBlocked) && (
+          <button
+            onClick={() => { setFilterPriority(""); setFilterTag(""); setSortByPriority(false); setHideBlocked(false); }}
+            className="ml-auto text-xs text-gray-400 hover:text-red-500 transition-colors"
+            title="Clear all filters"
+          >
+            ✕ Clear filters
+          </button>
+        )}
       </div>
 
       {rubricSections.map((section) => {

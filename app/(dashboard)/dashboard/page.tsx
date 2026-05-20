@@ -38,7 +38,6 @@ export default async function DashboardPage() {
   ]);
 
   const upcomingTasks = (upcomingResult.data ?? []) as TaskWithGroup[];
-
   const overdueCountByGroup: Record<string, number> = {};
   for (const row of overdueResult.data ?? []) {
     overdueCountByGroup[row.group_id] = (overdueCountByGroup[row.group_id] ?? 0) + 1;
@@ -46,12 +45,13 @@ export default async function DashboardPage() {
 
   return (
     <div>
+      {/* Page header */}
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Groups</h1>
-          <p className="text-gray-500 mt-1">Manage your project groups</p>
+          <p className="text-gray-500 mt-1 text-sm">All your active group projects in one place.</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2">
           <JoinGroupButton />
           <CreateGroupButton />
         </div>
@@ -60,48 +60,90 @@ export default async function DashboardPage() {
       <UpcomingDeadlinesWidget tasks={upcomingTasks} />
 
       {groups.length === 0 ? (
-        <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-300">
-          <p className="text-gray-400 text-lg">No groups yet</p>
-          <p className="text-gray-400 text-sm mt-1">Create a group or join one with an invite code</p>
+        <div className="text-center py-24 bg-white rounded-2xl border-2 border-dashed border-gray-200">
+          <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-700 mb-1">No groups yet</h3>
+          <p className="text-gray-400 text-sm mb-6 max-w-xs mx-auto">
+            Create a group for your assignment or join one using an invite code from a teammate.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <JoinGroupButton />
+            <CreateGroupButton />
+          </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {groups.map((group) => {
             if (!group?.id) return null;
             const daysLeft = group.due_date
               ? Math.ceil((new Date(group.due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
               : null;
             const overdueCount = overdueCountByGroup[group.id] ?? 0;
+            const isUrgent = daysLeft !== null && daysLeft < 3;
+            const isSoon = daysLeft !== null && daysLeft < 7 && !isUrgent;
+            const accentColor = overdueCount > 0 || isUrgent
+              ? "border-l-red-400"
+              : isSoon
+              ? "border-l-amber-400"
+              : "border-l-indigo-300";
 
             return (
               <Link
                 key={group.id}
                 href={`/groups/${group.id}`}
-                className="block bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-indigo-300 transition-all"
+                className={`group block bg-white rounded-2xl shadow-sm border border-gray-200 border-l-4 ${accentColor} p-5 hover:shadow-md hover:border-gray-300 transition-all`}
               >
+                {/* Top row */}
                 <div className="flex items-start justify-between mb-3">
-                  <span className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                  <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">
                     {group.course_code}
                   </span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     {overdueCount > 0 && (
-                      <span className="text-xs bg-red-100 text-red-600 rounded-full px-2 py-0.5 font-medium">
-                        {overdueCount} overdue
+                      <span className="text-xs bg-red-100 text-red-600 rounded-full px-2 py-0.5 font-semibold">
+                        ⚠ {overdueCount} overdue
                       </span>
                     )}
                     {group.role === "owner" && (
-                      <span className="text-xs text-gray-400">Owner</span>
+                      <span className="text-xs bg-gray-100 text-gray-500 rounded-full px-2 py-0.5 font-medium">
+                        Owner
+                      </span>
                     )}
                   </div>
                 </div>
-                <h2 className="font-semibold text-gray-900 text-lg leading-tight mb-1">{group.name}</h2>
-                <p className="text-sm text-gray-500 mb-4">{group.assignment_name}</p>
 
-                {daysLeft !== null && (
-                  <p className={`text-xs font-medium ${daysLeft < 3 ? "text-red-500" : daysLeft < 7 ? "text-amber-500" : "text-gray-400"}`}>
-                    {daysLeft > 0 ? `${daysLeft} day${daysLeft !== 1 ? "s" : ""} left` : daysLeft === 0 ? "Due today" : "Overdue"}
-                  </p>
-                )}
+                {/* Group name */}
+                <h2 className="font-bold text-gray-900 text-base leading-tight mb-1 group-hover:text-indigo-700 transition-colors">
+                  {group.name}
+                </h2>
+                <p className="text-sm text-gray-500 mb-4 line-clamp-1">{group.assignment_name}</p>
+
+                {/* Deadline footer */}
+                <div className="flex items-center justify-between pt-3 border-t border-gray-50">
+                  {daysLeft !== null ? (
+                    <span className={`text-xs font-semibold flex items-center gap-1 ${
+                      isUrgent ? "text-red-500" : isSoon ? "text-amber-500" : "text-gray-400"
+                    }`}>
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      {daysLeft > 0
+                        ? `${daysLeft} day${daysLeft !== 1 ? "s" : ""} left`
+                        : daysLeft === 0
+                        ? "Due today!"
+                        : "Overdue"}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-gray-300">No deadline set</span>
+                  )}
+                  <svg className="w-4 h-4 text-gray-300 group-hover:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
               </Link>
             );
           })}
