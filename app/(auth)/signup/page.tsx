@@ -7,41 +7,108 @@ import { createClient } from "@/lib/supabase/client";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-function hasUpper(s: string) { return /[A-Z]/.test(s); }
-function hasLower(s: string) { return /[a-z]/.test(s); }
+function hasUpper(s: string)  { return /[A-Z]/.test(s); }
+function hasLower(s: string)  { return /[a-z]/.test(s); }
 function hasNumber(s: string) { return /[0-9]/.test(s); }
-function hasSpecial(s: string) { return /[^A-Za-z0-9]/.test(s); }
+function hasSpecial(s: string){ return /[^A-Za-z0-9]/.test(s); }
 
-function passwordStrength(p: string): { label: string; color: string; width: string } {
-  if (p.length === 0) return { label: "", color: "", width: "0%" };
+function strength(p: string): { label: "Weak" | "Fair" | "Strong"; pct: number } {
+  if (!p.length) return { label: "Weak", pct: 0 };
   let score = 0;
-  if (p.length >= 8) score++;
+  if (p.length >= 8)  score++;
   if (p.length >= 12) score++;
   if (hasUpper(p) && hasLower(p)) score++;
-  if (hasNumber(p)) score++;
-  if (hasSpecial(p)) score++;
-  if (score <= 2) return { label: "Weak", color: "bg-red-500", width: "33%" };
-  if (score <= 3) return { label: "Fair", color: "bg-amber-500", width: "66%" };
-  return { label: "Strong", color: "bg-emerald-500", width: "100%" };
+  if (hasNumber(p))   score++;
+  if (hasSpecial(p))  score++;
+  if (score <= 2) return { label: "Weak",   pct: 33  };
+  if (score <= 3) return { label: "Fair",   pct: 66  };
+  return              { label: "Strong", pct: 100 };
 }
 
+const STRENGTH_COLOR = { Weak: "#EF4444", Fair: "#F59E0B", Strong: "#10B981" } as const;
+
+// ── Icons ─────────────────────────────────────────────────────────────────
+function ErrIcon() {
+  return (
+    <svg className="w-4 h-4 flex-shrink-0 mt-px" fill="currentColor" viewBox="0 0 20 20">
+      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+    </svg>
+  );
+}
+
+function FieldErr({ msg }: { msg: string }) {
+  return (
+    <p className="mt-1.5 text-xs text-red-400 flex items-start gap-1">
+      <svg className="w-3 h-3 flex-shrink-0 mt-px" fill="currentColor" viewBox="0 0 20 20">
+        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+      </svg>
+      {msg}
+    </p>
+  );
+}
+
+function EyeIcon({ open }: { open: boolean }) {
+  return open ? (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+    </svg>
+  ) : (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+    </svg>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
+}
+
+// ── Input styling helper ──────────────────────────────────────────────────
+function fieldProps(hasError: boolean) {
+  return {
+    className: [
+      "w-full rounded-lg border px-4 py-2.5 text-sm",
+      "focus:outline-none focus:ring-2 transition-all duration-150",
+      hasError
+        ? "border-red-500 focus:border-red-500 focus:ring-red-500/15"
+        : "focus:border-blue-500 focus:ring-blue-500/15",
+    ].join(" "),
+    style: {
+      background: "var(--ct-in)",
+      color: "var(--ct-t1)",
+      borderColor: hasError ? undefined : "var(--ct-bd)",
+    } as React.CSSProperties,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 export default function SignupPage() {
   const router = useRouter();
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+
+  const [fullName,        setFullName]        = useState("");
+  const [email,           setEmail]           = useState("");
+  const [password,        setPassword]        = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const [loading, setLoading] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
-  const [emailTakenError, setEmailTakenError] = useState(false);
+  const [showPw,          setShowPw]          = useState(false);
+  const [showConfirm,     setShowConfirm]     = useState(false);
+  const [touched,         setTouched]         = useState<Record<string, boolean>>({});
+  const [loading,         setLoading]         = useState(false);
+  const [serverError,     setServerError]     = useState<string | null>(null);
+  const [emailTaken,      setEmailTaken]      = useState(false);
 
   // ── Validation ──
   const nameError = (() => {
     if (!touched.fullName) return null;
-    if (!fullName.trim()) return "Name is required.";
-    if (fullName.trim().length < 2) return "Name must be at least 2 characters.";
-    if (fullName.trim().length > 20) return "Name must be 20 characters or less.";
+    const n = fullName.trim();
+    if (!n) return "Name is required.";
+    if (n.length < 2)  return "Name must be at least 2 characters.";
+    if (n.length > 20) return "Name must be 20 characters or less.";
     return null;
   })();
 
@@ -56,7 +123,6 @@ export default function SignupPage() {
     if (!touched.password) return null;
     if (!password) return "Password is required.";
     if (password.length < 8) return "Password must be at least 8 characters.";
-    if (password.length > 20) return "Password must be 20 characters or less.";
     if (!hasUpper(password)) return "Include at least one uppercase letter.";
     if (!hasLower(password)) return "Include at least one lowercase letter.";
     if (!hasNumber(password)) return "Include at least one number.";
@@ -70,258 +136,272 @@ export default function SignupPage() {
     return null;
   })();
 
-  const isValid = !nameError && !emailError && !passwordError && !confirmError
-    && fullName.trim().length >= 2 && EMAIL_RE.test(email)
-    && password.length >= 8 && password.length <= 20
-    && hasUpper(password) && hasLower(password) && hasNumber(password)
-    && confirmPassword === password;
+  const isValid =
+    !nameError && !emailError && !passwordError && !confirmError &&
+    fullName.trim().length >= 2 && EMAIL_RE.test(email) &&
+    password.length >= 8 &&
+    hasUpper(password) && hasLower(password) && hasNumber(password) &&
+    confirmPassword === password;
 
   function touch(field: string) {
     setTouched((t) => ({ ...t, [field]: true }));
   }
 
+  // ── Submit ──────────────────────────────────────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setTouched({ fullName: true, email: true, password: true, confirmPassword: true });
     if (!isValid) return;
 
     setServerError(null);
-    setEmailTakenError(false);
+    setEmailTaken(false);
     setLoading(true);
 
-    // Check duplicate email server-side before hitting Supabase Auth
     try {
-      const checkRes = await fetch("/api/auth/check-email", {
+      const res = await fetch("/api/auth/check-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      const checkData = await checkRes.json();
-      if (checkData.exists) {
-        setEmailTakenError(true);
+      if ((await res.json()).exists) {
+        setEmailTaken(true);
         touch("email");
         setLoading(false);
         return;
       }
-    } catch {
-      // network error — let Supabase handle it
-    }
+    } catch { /* let Supabase handle network errors */ }
 
-    const supabase = createClient();
-
-    const { error } = await supabase.auth.signUp({
+    const { error } = await createClient().auth.signUp({
       email,
       password,
       options: { data: { full_name: fullName.trim() } },
     });
 
-    if (error) {
-      setServerError(error.message);
-      setLoading(false);
-      return;
-    }
+    if (error) { setServerError(error.message); setLoading(false); return; }
 
     router.push("/dashboard");
     router.refresh();
   }
 
-  function fieldClass(error: string | null, touched: boolean) {
-    const base = "w-full rounded-lg border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 transition-all";
-    const style = { background: "var(--ct-in)", color: "var(--ct-t1)" } as React.CSSProperties;
-    if (!touched || !error) {
-      return { className: `${base} focus:border-blue-500 focus:ring-blue-500/15`, style: { ...style, borderColor: "var(--ct-bd)" } };
-    }
-    return { className: `${base} border-red-500 focus:border-red-500 focus:ring-red-500/15`, style };
-  }
-
-  const strength = passwordStrength(password);
+  const pw = strength(password);
 
   return (
-    <div className="w-full max-w-sm">
-      <div className="rounded-xl p-8 border" style={{ background: "var(--ct-surf)", borderColor: "var(--ct-bd)" }}>
+    <div className="w-full max-w-[480px]">
+      {/* ── Card ── */}
+      <div
+        className="rounded-2xl p-8 border"
+        style={{ background: "#111827", borderColor: "#1E2A3A" }}
+      >
+        {/* Header */}
         <div className="mb-7 text-center">
-          <Link href="/" className="inline-block mb-5">
+          <Link href="/" className="inline-block mb-5" aria-label="Back to home">
             <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center mx-auto shadow-[0_0_18px_rgba(59,130,246,0.35)]">
               <span className="text-white text-[11px] font-extrabold tracking-tight">GW</span>
             </div>
           </Link>
-          <h1 className="text-xl font-bold tracking-tight" style={{ color: "var(--ct-t1)" }}>Create your account</h1>
-          <p className="mt-1.5 text-sm" style={{ color: "var(--ct-t3)" }}>Free forever for students</p>
+          <h1 className="text-xl font-bold tracking-tight text-gray-50">Create your account</h1>
+          <p className="mt-1.5 text-sm text-gray-500">Free forever for students</p>
         </div>
 
-        <form onSubmit={handleSubmit} noValidate className="space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="space-y-5">
 
           {/* Full name */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-sm font-medium" style={{ color: "var(--ct-t2)" }}>Full name</label>
-              <span className="text-xs" style={{ color: fullName.length > 20 ? "#EF4444" : "var(--ct-t3)" }}>
-                {fullName.length}/20
-              </span>
+              <label className="text-sm font-medium text-gray-400">Full name</label>
+              {fullName.length > 15 && (
+                <span className="text-xs tabular-nums" style={{ color: fullName.length > 20 ? "#EF4444" : "var(--ct-t3)" }}>
+                  {fullName.length}/20
+                </span>
+              )}
             </div>
             <input
               type="text"
               autoComplete="name"
-              maxLength={21}
+              maxLength={20}
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               onBlur={() => touch("fullName")}
               placeholder="Jane Smith"
-              {...fieldClass(nameError, !!touched.fullName)}
+              {...fieldProps(!!nameError)}
             />
-            {nameError && (
-              <p className="mt-1.5 text-xs text-red-400 flex items-center gap-1">
-                <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-                {nameError}
-              </p>
-            )}
+            {nameError && <FieldErr msg={nameError} />}
           </div>
 
           {/* Email */}
           <div>
-            <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--ct-t2)" }}>Email</label>
+            <label className="block text-sm font-medium text-gray-400 mb-1.5">Email</label>
             <input
               type="email"
               autoComplete="email"
               value={email}
-              onChange={(e) => { setEmail(e.target.value); setEmailTakenError(false); }}
+              onChange={(e) => { setEmail(e.target.value); setEmailTaken(false); }}
               onBlur={() => touch("email")}
               placeholder="you@university.edu"
-              {...fieldClass(emailError || emailTakenError ? "err" : null, !!touched.email || emailTakenError)}
+              {...fieldProps(!!(emailError || emailTaken))}
             />
-            {emailTakenError ? (
+            {emailTaken ? (
               <p className="mt-1.5 text-xs text-red-400 flex items-start gap-1">
                 <svg className="w-3 h-3 flex-shrink-0 mt-px" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
                 <span>
                   An account with this email already exists.{" "}
-                  <Link href="/login" className="underline underline-offset-2 hover:text-red-300 transition-colors font-medium">
+                  <Link href="/login" className="underline underline-offset-2 font-medium hover:text-red-300 transition-colors">
                     Sign in instead
                   </Link>
                 </span>
               </p>
             ) : emailError ? (
-              <p className="mt-1.5 text-xs text-red-400 flex items-center gap-1">
-                <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-                {emailError}
-              </p>
+              <FieldErr msg={emailError} />
             ) : null}
           </div>
 
           {/* Password */}
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-sm font-medium" style={{ color: "var(--ct-t2)" }}>Password</label>
-              <span className="text-xs" style={{ color: password.length > 20 ? "#EF4444" : "var(--ct-t3)" }}>
-                {password.length}/20
-              </span>
+            <label className="block text-sm font-medium text-gray-400 mb-1.5">Password</label>
+            <div className="relative">
+              <input
+                type={showPw ? "text" : "password"}
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onBlur={() => touch("password")}
+                placeholder="Min 8 characters"
+                className={[
+                  "w-full rounded-lg border px-4 py-2.5 pr-10 text-sm",
+                  "focus:outline-none focus:ring-2 transition-all duration-150",
+                  passwordError
+                    ? "border-red-500 focus:border-red-500 focus:ring-red-500/15"
+                    : "focus:border-blue-500 focus:ring-blue-500/15",
+                ].join(" ")}
+                style={{
+                  background: "var(--ct-in)",
+                  color: "var(--ct-t1)",
+                  borderColor: passwordError ? undefined : "var(--ct-bd)",
+                } as React.CSSProperties}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPw((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                style={{ color: "var(--ct-t3)" }}
+                tabIndex={-1}
+                aria-label={showPw ? "Hide password" : "Show password"}
+              >
+                <EyeIcon open={showPw} />
+              </button>
             </div>
-            <input
-              type="password"
-              autoComplete="new-password"
-              maxLength={21}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onBlur={() => touch("password")}
-              placeholder="Min 8 chars, upper, lower, number"
-              {...fieldClass(passwordError, !!touched.password)}
-            />
-            {/* Strength bar */}
+
+            {/* Strength bar — only when typing */}
             {password.length > 0 && (
-              <div className="mt-2">
-                <div className="h-1 rounded-full overflow-hidden" style={{ background: "var(--ct-bd)" }}>
-                  <div className={`h-full rounded-full transition-all duration-300 ${strength.color}`} style={{ width: strength.width }} />
+              <div className="mt-2.5">
+                <div className="flex gap-1 mb-1.5">
+                  {(["Weak", "Fair", "Strong"] as const).map((level, i) => {
+                    const filled = i < (pw.label === "Weak" ? 1 : pw.label === "Fair" ? 2 : 3);
+                    return (
+                      <div
+                        key={level}
+                        className="flex-1 h-1 rounded-full transition-all duration-300"
+                        style={{ background: filled ? STRENGTH_COLOR[pw.label] : "var(--ct-bd)" }}
+                      />
+                    );
+                  })}
                 </div>
-                <p className="mt-1 text-xs" style={{ color: "var(--ct-t3)" }}>
-                  Strength: <span className={
-                    strength.label === "Strong" ? "text-emerald-400" :
-                    strength.label === "Fair" ? "text-amber-400" : "text-red-400"
-                  }>{strength.label}</span>
+                <p className="text-xs" style={{ color: "var(--ct-t3)" }}>
+                  Password strength:{" "}
+                  <span style={{ color: STRENGTH_COLOR[pw.label] }} className="font-medium">
+                    {pw.label}
+                  </span>
                 </p>
               </div>
             )}
-            {passwordError && (
-              <p className="mt-1.5 text-xs text-red-400 flex items-center gap-1">
-                <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-                {passwordError}
-              </p>
-            )}
-            {/* Requirements checklist */}
-            {touched.password && password.length > 0 && (
-              <ul className="mt-2 space-y-0.5">
-                {[
-                  { ok: password.length >= 8 && password.length <= 20, text: "8–20 characters" },
-                  { ok: hasUpper(password), text: "One uppercase letter" },
-                  { ok: hasLower(password), text: "One lowercase letter" },
-                  { ok: hasNumber(password), text: "One number" },
-                ].map((r) => (
-                  <li key={r.text} className={`text-xs flex items-center gap-1.5 ${r.ok ? "text-emerald-400" : "text-red-400"}`}>
-                    <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      {r.ok
-                        ? <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        : <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                      }
-                    </svg>
-                    {r.text}
-                  </li>
-                ))}
-              </ul>
-            )}
+
+            {passwordError && <FieldErr msg={passwordError} />}
           </div>
 
           {/* Confirm password */}
           <div>
-            <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--ct-t2)" }}>Confirm password</label>
-            <input
-              type="password"
-              autoComplete="new-password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              onBlur={() => touch("confirmPassword")}
-              placeholder="Re-enter your password"
-              {...fieldClass(confirmError, !!touched.confirmPassword)}
-            />
-            {confirmError && (
-              <p className="mt-1.5 text-xs text-red-400 flex items-center gap-1">
-                <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-                {confirmError}
-              </p>
-            )}
-            {touched.confirmPassword && !confirmError && confirmPassword && (
+            <label className="block text-sm font-medium text-gray-400 mb-1.5">Confirm password</label>
+            <div className="relative">
+              <input
+                type={showConfirm ? "text" : "password"}
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                onBlur={() => touch("confirmPassword")}
+                placeholder="Re-enter your password"
+                className={[
+                  "w-full rounded-lg border px-4 py-2.5 pr-10 text-sm",
+                  "focus:outline-none focus:ring-2 transition-all duration-150",
+                  confirmError
+                    ? "border-red-500 focus:border-red-500 focus:ring-red-500/15"
+                    : touched.confirmPassword && confirmPassword && !confirmError
+                    ? "border-emerald-500 focus:border-emerald-500 focus:ring-emerald-500/15"
+                    : "focus:border-blue-500 focus:ring-blue-500/15",
+                ].join(" ")}
+                style={{
+                  background: "var(--ct-in)",
+                  color: "var(--ct-t1)",
+                  borderColor: (confirmError || (touched.confirmPassword && confirmPassword && !confirmError)) ? undefined : "var(--ct-bd)",
+                } as React.CSSProperties}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirm((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                style={{ color: "var(--ct-t3)" }}
+                tabIndex={-1}
+                aria-label={showConfirm ? "Hide password" : "Show password"}
+              >
+                <EyeIcon open={showConfirm} />
+              </button>
+            </div>
+            {confirmError ? (
+              <FieldErr msg={confirmError} />
+            ) : touched.confirmPassword && confirmPassword && !confirmError ? (
               <p className="mt-1.5 text-xs text-emerald-400 flex items-center gap-1">
                 <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
                 Passwords match
               </p>
-            )}
+            ) : null}
           </div>
 
+          {/* Server error */}
           {serverError && (
-            <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2.5">
-              {serverError}
-            </p>
+            <div
+              className="flex items-start gap-3 rounded-lg px-4 py-3"
+              style={{
+                background: "rgba(239,68,68,0.1)",
+                border: "1px solid rgba(239,68,68,0.3)",
+                marginTop: 8,
+                marginBottom: 4,
+              }}
+            >
+              <span className="text-red-400"><ErrIcon /></span>
+              <p className="text-sm" style={{ color: "#FCA5A5" }}>{serverError}</p>
+            </div>
           )}
 
+          {/* Submit */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-blue-500 hover:bg-blue-600 active:scale-[0.98] px-4 py-2.5 text-white text-sm font-semibold disabled:opacity-60 transition-all duration-150 mt-1"
+            className="w-full rounded-lg bg-blue-500 hover:bg-blue-600 active:scale-[0.98] px-4 py-3.5 text-white text-sm font-semibold disabled:opacity-60 transition-all duration-150 flex items-center justify-center gap-2"
+            style={{ boxShadow: loading ? "none" : "0 0 20px rgba(59,130,246,0.25)" }}
           >
-            {loading ? "Creating account…" : "Create free account"}
+            {loading ? (
+              <>
+                <Spinner />
+                Creating account…
+              </>
+            ) : "Create free account"}
           </button>
         </form>
 
-        <p className="mt-5 text-center text-sm" style={{ color: "var(--ct-t3)" }}>
+        <p className="mt-5 text-center text-sm text-gray-500">
           Already have an account?{" "}
           <Link href="/login" className="text-blue-400 font-medium hover:text-blue-300 transition-colors">
             Sign in
