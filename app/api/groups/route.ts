@@ -1,78 +1,86 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getUser, sanitize, r400, r401, r500 } from "@/lib/api";
+
+const MAX_NAME = 100;
+const MAX_CODE = 20;
+const MAX_SECTION_TITLE = 100;
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
+  const user = await getUser();
+  if (!user) return r401();
+
+  const body = await request.json().catch(() => null);
+  if (!body) return r400("Invalid request body");
+
+  const name = sanitize(body.name, MAX_NAME);
+  const courseCode = sanitize(body.course_code, MAX_CODE);
+  const assignmentName = sanitize(body.assignment_name, MAX_NAME);
+
+  if (!name) return r400("Group name is required (max 100 characters)");
+  if (!courseCode) return r400("Course code is required (max 20 characters)");
+  if (!assignmentName) return r400("Assignment name is required (max 100 characters)");
+
+  const dueDate = typeof body.due_date === "string" ? body.due_date : null;
+  if (dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
+    return r400("Invalid due_date format — use YYYY-MM-DD");
+  }
+
+  if (!Array.isArray(body.rubric_sections) || body.rubric_sections.length === 0) {
+    return r400("At least one rubric section is required");
+  }
+  if (body.rubric_sections.length > 20) {
+    return r400("Maximum 20 rubric sections allowed");
+  }
+
+  const sections = body.rubric_sections.map((s: unknown) => {
+    if (typeof s !== "object" || s === null) return null;
+    const obj = s as Record<string, unknown>;
+    const title = sanitize(obj.title, MAX_SECTION_TITLE);
+    const weight = typeof obj.weight_pct === "number" ? obj.weight_pct : NaN;
+    const order = typeof obj.sort_order === "number" ? obj.sort_order : 0;
+    return title && !isNaN(weight) && weight > 0 && weight <= 100
+      ? { title, weight_pct: weight, sort_order: order }
+      : null;
+  });
+
+  if (sections.some((s: null | object) => s === null)) {
+    return r400("Each rubric section needs a title and a valid weight (1–100)");
+  }
+
+  const totalWeight = sections.reduce((sum: number, s: { weight_pct: number } | null) => sum + (s?.weight_pct ?? 0), 0);
+  if (Math.abs(totalWeight - 100) > 0.01) {
+    return r400(`Rubric weights must sum to 100 (got ${totalWeight.toFixed(1)})`);
+  }
+
   const admin = createAdminClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const body = await request.json();
-  const { name, course_code, assignment_name, due_date, rubric_sections } = body;
-
-  if (!name || !course_code || !assignment_name) {
-    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-  }
-
-  if (!Array.isArray(rubric_sections) || rubric_sections.length === 0) {
-    return NextResponse.json({ error: "At least one rubric section required" }, { status: 400 });
-  }
-
-  const totalWeight = rubric_sections.reduce(
-    (sum: number, s: { weight_pct: number }) => sum + s.weight_pct,
-    0
-  );
-  if (Math.abs(totalWeight - 100) > 0.01) {
-    return NextResponse.json(
-      { error: `Rubric weights must sum to 100 (got ${totalWeight})` },
-      { status: 400 }
-    );
-  }
-
-  // Create the group
   const { data: group, error: groupError } = await admin
     .from("groups")
-    .insert({ name, course_code, assignment_name, due_date, created_by: user.id })
+    .insert({ name, course_code: courseCode, assignment_name: assignmentName, due_date: dueDate, created_by: user.id })
     .select()
     .single();
 
-  if (groupError || !group) {
-    return NextResponse.json({ error: groupError?.message ?? "Failed to create group" }, { status: 500 });
-  }
+  if (groupError || !group) return r500();
 
-  // Add creator as owner
-  const { error: memberError } = await admin.from("group_members").insert({
-    group_id: group.id,
-    user_id: user.id,
-    role: "owner",
-  });
+  const { error: memberError } = await admin
+    .from("group_members")
+    .insert({ group_id: group.id, user_id: user.id, role: "owner" });
 
-  if (memberError) {
-    return NextResponse.json({ error: memberError.message }, { status: 500 });
-  }
+  if (memberError) return r500();
 
-  // Insert rubric sections
-  const { error: rubricError } = await admin.from("rubric_sections").insert(
-    rubric_sections.map((s: { title: string; weight_pct: number; sort_order: number }) => ({
+  const { error: rubricError } = await admin
+    .from("rubric_sections")
+    .insert(sections.map((s: { title: string; weight_pct: number; sort_order: number } | null) => ({
       group_id: group.id,
-      title: s.title,
-      weight_pct: s.weight_pct,
-      sort_order: s.sort_order,
-    }))
-  );
+      title: s!.title,
+      weight_pct: s!.weight_pct,
+      sort_order: s!.sort_order,
+    })));
 
-  if (rubricError) {
-    return NextResponse.json({ error: rubricError.message }, { status: 500 });
-  }
+  if (rubricError) return r500();
 
-  // Log contribution
   await admin.from("contribution_logs").insert({
     group_id: group.id,
     user_id: user.id,

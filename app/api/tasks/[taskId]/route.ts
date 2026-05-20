@@ -1,25 +1,26 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getUser, sanitize, isUUID, r400, r401, r403, r404, r500 } from "@/lib/api";
 import type { Database } from "@/lib/supabase/types";
+
+const VALID_STATUS = new Set(["todo", "in_progress", "done", "blocked"]);
+const VALID_PRIORITY = new Set(["low", "medium", "high", "urgent"]);
+const VALID_TAGS = new Set(["research", "writing", "review", "design", "code"]);
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ taskId: string }> }
 ) {
-  const supabase = await createClient();
-  const admin = createAdminClient();
   const { taskId } = await params;
+  if (!isUUID(taskId)) return r400("Invalid task ID");
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
+  if (!user) return r401();
 
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const body = await request.json().catch(() => null);
+  if (!body) return r400("Invalid request body");
 
-  const body = await request.json();
+  const admin = createAdminClient();
 
   const { data: existing } = await admin
     .from("tasks")
@@ -27,9 +28,7 @@ export async function PATCH(
     .eq("id", taskId)
     .single();
 
-  if (!existing) {
-    return NextResponse.json({ error: "Task not found" }, { status: 404 });
-  }
+  if (!existing) return r404("Task");
 
   const { data: membership } = await admin
     .from("group_members")
@@ -38,39 +37,54 @@ export async function PATCH(
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!membership) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!membership) return r403();
+
+  type TaskUpdate = Database["public"]["Tables"]["tasks"]["Update"];
+  const update: Partial<TaskUpdate> = {};
+
+  if ("title" in body) {
+    const t = sanitize(body.title, 200);
+    if (!t) return r400("Title cannot be empty (max 200 characters)");
+    update.title = t;
   }
-
-  type TaskUpdate = {
-    title?: string;
-    description?: string | null;
-    status?: "todo" | "in_progress" | "done" | "blocked";
-    priority?: "low" | "medium" | "high" | "urgent";
-    tags?: string[];
-    assigned_to?: string | null;
-    rubric_section_id?: string | null;
-    due_date?: string | null;
-  };
-
-  const allowedFields: (keyof TaskUpdate)[] = [
-    "title", "description", "status", "priority", "tags", "assigned_to", "rubric_section_id", "due_date",
-  ];
-  const update: TaskUpdate = {};
-  for (const field of allowedFields) {
-    if (field in body) (update as Record<string, unknown>)[field] = body[field];
+  if ("description" in body) {
+    update.description = sanitize(body.description, 2000);
+  }
+  if ("status" in body) {
+    if (!VALID_STATUS.has(body.status)) return r400("Invalid status value");
+    update.status = body.status;
+  }
+  if ("priority" in body) {
+    if (!VALID_PRIORITY.has(body.priority)) return r400("Invalid priority value");
+    update.priority = body.priority;
+  }
+  if ("tags" in body) {
+    const tags = Array.isArray(body.tags)
+      ? body.tags.filter((t: unknown) => typeof t === "string" && VALID_TAGS.has(t)).slice(0, 5)
+      : [];
+    update.tags = tags;
+  }
+  if ("assigned_to" in body) {
+    if (body.assigned_to !== null && !isUUID(body.assigned_to)) return r400("Invalid assigned_to");
+    update.assigned_to = body.assigned_to;
+  }
+  if ("rubric_section_id" in body) {
+    if (body.rubric_section_id !== null && !isUUID(body.rubric_section_id)) return r400("Invalid rubric_section_id");
+    update.rubric_section_id = body.rubric_section_id;
+  }
+  if ("due_date" in body) {
+    if (body.due_date !== null && !/^\d{4}-\d{2}-\d{2}$/.test(body.due_date)) return r400("Invalid due_date format");
+    update.due_date = body.due_date;
   }
 
   const { data: task, error } = await admin
     .from("tasks")
-    .update(update as Database["public"]["Tables"]["tasks"]["Update"])
+    .update(update)
     .eq("id", taskId)
     .select()
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return r500();
 
   if (body.status && body.status !== existing.status) {
     await admin.from("contribution_logs").insert({
@@ -89,17 +103,13 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ taskId: string }> }
 ) {
-  const supabase = await createClient();
-  const admin = createAdminClient();
   const { taskId } = await params;
+  if (!isUUID(taskId)) return r400("Invalid task ID");
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
+  if (!user) return r401();
 
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const admin = createAdminClient();
 
   const { data: existing } = await admin
     .from("tasks")
@@ -107,9 +117,7 @@ export async function DELETE(
     .eq("id", taskId)
     .single();
 
-  if (!existing) {
-    return NextResponse.json({ error: "Task not found" }, { status: 404 });
-  }
+  if (!existing) return r404("Task");
 
   const { data: membership } = await admin
     .from("group_members")
@@ -118,14 +126,10 @@ export async function DELETE(
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!membership) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  if (!membership) return r403();
 
-  const canDelete =
-    existing.created_by === user.id || membership.role === "owner";
-  if (!canDelete) {
-    return NextResponse.json({ error: "Only the task creator or group owner can delete" }, { status: 403 });
+  if (existing.created_by !== user.id && membership.role !== "owner") {
+    return r403("Only the task creator or group owner can delete this task");
   }
 
   await admin.from("tasks").delete().eq("id", taskId);

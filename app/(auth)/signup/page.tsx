@@ -86,6 +86,24 @@ export default function SignupPage() {
 
     setServerError(null);
     setLoading(true);
+
+    // Check duplicate email server-side before hitting Supabase Auth
+    try {
+      const checkRes = await fetch("/api/auth/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const checkData = await checkRes.json();
+      if (checkData.exists) {
+        setServerError("An account with this email already exists. Sign in instead?");
+        setLoading(false);
+        return;
+      }
+    } catch {
+      // network error — let Supabase handle it
+    }
+
     const supabase = createClient();
 
     const { error } = await supabase.auth.signUp({

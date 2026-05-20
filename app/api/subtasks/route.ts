@@ -1,52 +1,71 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getUser, getMembership, sanitize, isUUID, r400, r401, r403, r404, r500 } from "@/lib/api";
 
 export async function GET(request: Request) {
-  const supabase = await createClient();
-  const admin = createAdminClient();
   const { searchParams } = new URL(request.url);
   const taskId = searchParams.get("task_id");
 
-  if (!taskId) return NextResponse.json({ error: "task_id required" }, { status: 400 });
+  if (!isUUID(taskId)) return r400("Invalid task_id");
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const user = await getUser();
+  if (!user) return r401();
 
-  const { data: task } = await admin.from("tasks").select("group_id").eq("id", taskId).single();
-  if (!task) return NextResponse.json({ error: "Task not found" }, { status: 404 });
+  const admin = createAdminClient();
 
-  const { data: membership } = await admin
-    .from("group_members").select("id").eq("group_id", task.group_id).eq("user_id", user.id).maybeSingle();
-  if (!membership) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const { data: task } = await admin.from("tasks").select("group_id").eq("id", taskId!).single();
+  if (!task) return r404("Task");
+
+  const membership = await getMembership(task.group_id, user.id);
+  if (!membership) return r403();
 
   const { data: subtasks } = await admin
-    .from("subtasks").select("*").eq("task_id", taskId).order("sort_order");
+    .from("subtasks")
+    .select("*")
+    .eq("task_id", taskId!)
+    .order("sort_order");
 
   return NextResponse.json({ subtasks: subtasks ?? [] });
 }
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
+  const user = await getUser();
+  if (!user) return r401();
+
+  const body = await request.json().catch(() => null);
+  if (!body) return r400("Invalid request body");
+
+  const taskId = body.task_id;
+  const title = sanitize(body.title, 200);
+  const sortOrder = typeof body.sort_order === "number" ? body.sort_order : 0;
+
+  if (!isUUID(taskId)) return r400("Invalid task_id");
+  if (!title) return r400("Subtask title is required (max 200 characters)");
+
   const admin = createAdminClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { data: task } = await admin.from("tasks").select("group_id").eq("id", taskId).single();
+  if (!task) return r404("Task");
 
-  const { task_id, title, sort_order } = await request.json();
-  if (!task_id || !title?.trim()) return NextResponse.json({ error: "task_id and title required" }, { status: 400 });
+  const membership = await getMembership(task.group_id, user.id);
+  if (!membership) return r403();
 
-  const { data: task } = await admin.from("tasks").select("group_id").eq("id", task_id).single();
-  if (!task) return NextResponse.json({ error: "Task not found" }, { status: 404 });
+  const { data: existing } = await admin
+    .from("subtasks")
+    .select("id")
+    .eq("task_id", taskId);
 
-  const { data: membership } = await admin
-    .from("group_members").select("id").eq("group_id", task.group_id).eq("user_id", user.id).maybeSingle();
-  if (!membership) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if ((existing?.length ?? 0) >= 20) {
+    return r400("Maximum 20 subtasks per task");
+  }
 
   const { data: subtask, error } = await admin
-    .from("subtasks").insert({ task_id, title: title.trim(), sort_order: sort_order ?? 0 }).select().single();
+    .from("subtasks")
+    .insert({ task_id: taskId, title, sort_order: sortOrder })
+    .select()
+    .single();
 
-  if (error || !subtask) return NextResponse.json({ error: error?.message ?? "Failed" }, { status: 500 });
+  if (error || !subtask) return r500();
 
   return NextResponse.json({ subtask }, { status: 201 });
 }
