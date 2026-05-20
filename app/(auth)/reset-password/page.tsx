@@ -103,21 +103,33 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     const supabase = createClient();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "INITIAL_SESSION") {
+        if (session) {
+          // Session was set server-side by /auth/callback — show form
+          setReady(true);
+        } else {
+          // No session and no code → user landed here directly, send them back
+          const code = new URLSearchParams(window.location.search).get("code");
+          if (!code) router.replace("/forgot-password");
+        }
+      }
+      // Fallback for any client-side PKCE or implicit flow
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
         setReady(true);
       }
     });
 
-    // @supabase/ssr uses PKCE — the email link arrives as ?code=...
-    // exchangeCodeForSession converts it into a session and fires PASSWORD_RECOVERY
+    // If there's a ?code= (direct link without callback), exchange it client-side
     const code = new URLSearchParams(window.location.search).get("code");
     if (code) {
-      supabase.auth.exchangeCodeForSession(code).catch(() => {});
+      supabase.auth.exchangeCodeForSession(code).catch(() => {
+        router.replace("/forgot-password?error=expired");
+      });
     }
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [router]);
 
   const passwordError = (() => {
     if (!touched.password) return null;

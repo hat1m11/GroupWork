@@ -31,6 +31,18 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
+  // Supabase redirects auth errors (e.g. expired reset links) to the site root.
+  // Catch them here and forward to forgot-password with a human-readable reason.
+  if (pathname === "/" && request.nextUrl.searchParams.has("error_code")) {
+    const errorCode = request.nextUrl.searchParams.get("error_code");
+    const reason = errorCode === "otp_expired" ? "expired" : "invalid";
+    const url = request.nextUrl.clone();
+    url.pathname = "/forgot-password";
+    url.search = `?error=${reason}`;
+    url.hash = "";
+    return NextResponse.redirect(url);
+  }
+
   const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/signup");
   const isDashboardRoute =
     pathname.startsWith("/dashboard") ||

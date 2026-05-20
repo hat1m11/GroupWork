@@ -1,13 +1,20 @@
 "use client";
 
-// REMINDER: Add http://localhost:3000/reset-password (and your production URL) to
+// REMINDER: Add http://localhost:3000/auth/callback and your production URL
+// (https://your-app.vercel.app/auth/callback) to
 // Supabase Dashboard → Authentication → URL Configuration → Redirect URLs
 
 import { useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+const LINK_ERRORS: Record<string, string> = {
+  expired: "That reset link has expired. Enter your email to get a new one.",
+  invalid: "That reset link is invalid. Enter your email to get a new one.",
+};
 
 function Spinner() {
   return (
@@ -27,10 +34,16 @@ function MailIcon() {
 }
 
 export default function ForgotPasswordPage() {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  // Pre-populate error from ?error= param (set by /auth/callback on expired links)
+  const reason = searchParams.get("error");
+  const [error, setError] = useState<string | null>(
+    reason ? (LINK_ERRORS[reason] ?? null) : null
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -45,7 +58,7 @@ export default function ForgotPasswordPage() {
     const supabase = createClient();
 
     const { error: sbError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
     });
 
     setLoading(false);
@@ -112,7 +125,7 @@ export default function ForgotPasswordPage() {
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);
-                    if (error) setError(null);
+                    if (error && EMAIL_RE.test(e.target.value)) setError(null);
                   }}
                   placeholder="you@university.edu"
                   className={[
