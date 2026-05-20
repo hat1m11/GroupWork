@@ -17,7 +17,15 @@ interface Props {
   initialTasks: Task[];
   members: Member[];
   currentUserId: string;
+  subtaskCounts?: Record<string, { total: number; completed: number }>;
 }
+
+const PRIORITY_ORDER: Record<Task["priority"], number> = {
+  urgent: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+};
 
 export default function TaskBoard({
   groupId,
@@ -25,9 +33,12 @@ export default function TaskBoard({
   initialTasks,
   members,
   currentUserId,
+  subtaskCounts = {},
 }: Props) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [createFor, setCreateFor] = useState<string | null>(null);
+  const [filterPriority, setFilterPriority] = useState<Task["priority"] | "">("");
+  const [sortByPriority, setSortByPriority] = useState(false);
 
   const handleTaskCreated = useCallback((task: Task) => {
     setTasks((prev) => [...prev, task]);
@@ -39,15 +50,12 @@ export default function TaskBoard({
       setTasks((prev) =>
         prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
       );
-
       const res = await fetch(`/api/tasks/${taskId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
-
       if (!res.ok) {
-        // Revert on failure
         setTasks((prev) =>
           prev.map((t) =>
             t.id === taskId
@@ -60,15 +68,59 @@ export default function TaskBoard({
     [tasks]
   );
 
+  const handlePriorityChange = useCallback(
+    async (taskId: string, newPriority: Task["priority"]) => {
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? { ...t, priority: newPriority } : t))
+      );
+      await fetch(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priority: newPriority }),
+      });
+    },
+    []
+  );
+
   const handleDeleteTask = useCallback(async (taskId: string) => {
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
     await fetch(`/api/tasks/${taskId}`, { method: "DELETE" });
   }, []);
 
+  const visibleTasks = tasks
+    .filter((t) => !filterPriority || t.priority === filterPriority)
+    .sort((a, b) =>
+      sortByPriority ? PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority] : 0
+    );
+
   return (
     <div className="space-y-6">
+      {/* Toolbar */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <select
+          value={filterPriority}
+          onChange={(e) => setFilterPriority(e.target.value as Task["priority"] | "")}
+          className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none bg-white"
+        >
+          <option value="">All priorities</option>
+          <option value="urgent">Urgent</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={sortByPriority}
+            onChange={(e) => setSortByPriority(e.target.checked)}
+            className="rounded"
+          />
+          Sort by priority
+        </label>
+      </div>
+
       {rubricSections.map((section) => {
-        const sectionTasks = tasks.filter(
+        const sectionTasks = visibleTasks.filter(
           (t) => t.rubric_section_id === section.id
         );
         const doneTasks = sectionTasks.filter((t) => t.status === "done").length;
@@ -85,8 +137,10 @@ export default function TaskBoard({
             members={members}
             progress={progress}
             currentUserId={currentUserId}
+            subtaskCounts={subtaskCounts}
             onCreateTask={() => setCreateFor(section.id)}
             onStatusChange={handleStatusChange}
+            onPriorityChange={handlePriorityChange}
             onDeleteTask={handleDeleteTask}
           />
         );

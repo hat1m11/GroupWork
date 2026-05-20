@@ -15,8 +15,10 @@ interface Props {
   members: Member[];
   progress: number;
   currentUserId: string;
+  subtaskCounts: Record<string, { total: number; completed: number }>;
   onCreateTask: () => void;
   onStatusChange: (taskId: string, status: Task["status"]) => void;
+  onPriorityChange: (taskId: string, priority: Task["priority"]) => void;
   onDeleteTask: (taskId: string) => void;
 }
 
@@ -26,8 +28,10 @@ export default function RubricSectionColumn({
   members,
   progress,
   currentUserId,
+  subtaskCounts,
   onCreateTask,
   onStatusChange,
+  onPriorityChange,
   onDeleteTask,
 }: Props) {
   const todo = tasks.filter((t) => t.status === "todo");
@@ -36,7 +40,6 @@ export default function RubricSectionColumn({
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-      {/* Section header */}
       <div className="px-5 pt-5 pb-3">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
@@ -53,7 +56,6 @@ export default function RubricSectionColumn({
           </button>
         </div>
 
-        {/* Weighted progress bar */}
         <div className="flex items-center gap-3">
           <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
             <div
@@ -75,7 +77,6 @@ export default function RubricSectionColumn({
         </p>
       </div>
 
-      {/* Task columns */}
       <div className="grid grid-cols-3 gap-px bg-gray-100 border-t border-gray-100">
         {[
           { label: "To do", items: todo, status: "todo" as const },
@@ -93,7 +94,9 @@ export default function RubricSectionColumn({
                   task={task}
                   members={members}
                   currentUserId={currentUserId}
+                  subtaskCount={subtaskCounts[task.id]}
                   onStatusChange={onStatusChange}
+                  onPriorityChange={onPriorityChange}
                   onDelete={onDeleteTask}
                 />
               ))}

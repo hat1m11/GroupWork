@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import type { Task } from "@/lib/supabase/types";
+import type { Task, Subtask } from "@/lib/supabase/types";
+import PriorityBadge from "./PriorityBadge";
+import SubtaskChecklist from "./SubtaskChecklist";
 
 interface Member {
   id: string;
@@ -15,11 +17,20 @@ const STATUS_OPTIONS: { value: Task["status"]; label: string }[] = [
   { value: "done", label: "Done" },
 ];
 
+const PRIORITY_OPTIONS: { value: Task["priority"]; label: string }[] = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+  { value: "urgent", label: "Urgent" },
+];
+
 interface Props {
   task: Task;
   members: Member[];
   currentUserId: string;
+  subtaskCount?: { total: number; completed: number };
   onStatusChange: (taskId: string, status: Task["status"]) => void;
+  onPriorityChange: (taskId: string, priority: Task["priority"]) => void;
   onDelete: (taskId: string) => void;
 }
 
@@ -27,10 +38,15 @@ export default function TaskCard({
   task,
   members,
   currentUserId,
+  subtaskCount,
   onStatusChange,
+  onPriorityChange,
   onDelete,
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showSubtasks, setShowSubtasks] = useState(false);
+  const [subtasks, setSubtasks] = useState<Subtask[] | null>(null);
+  const [loadingSubtasks, setLoadingSubtasks] = useState(false);
 
   const assignee = members.find((m) => m.id === task.assigned_to);
 
@@ -38,6 +54,20 @@ export default function TaskCard({
     task.due_date &&
     task.status !== "done" &&
     new Date(task.due_date) < new Date();
+
+  async function handleToggleSubtasks() {
+    if (!showSubtasks && subtasks === null) {
+      setLoadingSubtasks(true);
+      try {
+        const res = await fetch(`/api/subtasks?task_id=${task.id}`);
+        const data = await res.json();
+        setSubtasks(data.subtasks ?? []);
+      } finally {
+        setLoadingSubtasks(false);
+      }
+    }
+    setShowSubtasks((v) => !v);
+  }
 
   return (
     <div
@@ -58,7 +88,6 @@ export default function TaskCard({
           {task.title}
         </p>
 
-        {/* Status cycle button */}
         <button
           onClick={() => {
             const next =
@@ -82,6 +111,7 @@ export default function TaskCard({
 
       <div className="mt-2 flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 flex-wrap">
+          <PriorityBadge priority={task.priority} />
           {assignee && (
             <span className="text-xs bg-gray-100 text-gray-600 rounded-full px-2 py-0.5">
               {assignee.full_name ?? assignee.email.split("@")[0]}
@@ -101,9 +131,16 @@ export default function TaskCard({
               })}
             </span>
           )}
+          {subtaskCount && subtaskCount.total > 0 && (
+            <button
+              onClick={handleToggleSubtasks}
+              className="text-xs bg-gray-100 text-gray-500 rounded-full px-2 py-0.5 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+            >
+              {subtaskCount.completed}/{subtaskCount.total} done
+            </button>
+          )}
         </div>
 
-        {/* Actions menu */}
         <div className="relative">
           <button
             onClick={() => setMenuOpen((o) => !o)}
@@ -113,32 +150,39 @@ export default function TaskCard({
           </button>
           {menuOpen && (
             <>
-              <div
-                className="fixed inset-0 z-10"
-                onClick={() => setMenuOpen(false)}
-              />
-              <div className="absolute right-0 top-6 z-20 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[140px]">
-                <p className="px-3 py-1 text-xs font-semibold text-gray-400 uppercase">
-                  Move to
-                </p>
+              <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+              <div className="absolute right-0 top-6 z-20 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[160px]">
+                <p className="px-3 py-1 text-xs font-semibold text-gray-400 uppercase">Move to</p>
                 {STATUS_OPTIONS.filter((s) => s.value !== task.status).map((s) => (
                   <button
                     key={s.value}
-                    onClick={() => {
-                      onStatusChange(task.id, s.value);
-                      setMenuOpen(false);
-                    }}
+                    onClick={() => { onStatusChange(task.id, s.value); setMenuOpen(false); }}
                     className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
                   >
                     {s.label}
                   </button>
                 ))}
                 <div className="border-t border-gray-100 mt-1 pt-1">
+                  <p className="px-3 py-1 text-xs font-semibold text-gray-400 uppercase">Priority</p>
+                  {PRIORITY_OPTIONS.filter((p) => p.value !== task.priority).map((p) => (
+                    <button
+                      key={p.value}
+                      onClick={() => { onPriorityChange(task.id, p.value); setMenuOpen(false); }}
+                      className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="border-t border-gray-100 mt-1 pt-1">
                   <button
-                    onClick={() => {
-                      onDelete(task.id);
-                      setMenuOpen(false);
-                    }}
+                    onClick={() => { handleToggleSubtasks(); setMenuOpen(false); }}
+                    className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    {showSubtasks ? "Hide subtasks" : "Show subtasks"}
+                  </button>
+                  <button
+                    onClick={() => { onDelete(task.id); setMenuOpen(false); }}
                     className="w-full text-left px-3 py-1.5 text-sm text-red-500 hover:bg-red-50"
                   >
                     Delete
@@ -149,6 +193,33 @@ export default function TaskCard({
           )}
         </div>
       </div>
+
+      {showSubtasks && (
+        <div className="mt-3 border-t border-gray-100 pt-3">
+          {loadingSubtasks ? (
+            <p className="text-xs text-gray-400">Loading…</p>
+          ) : (
+            <SubtaskChecklist
+              taskId={task.id}
+              initialSubtasks={subtasks ?? []}
+              onCountChange={(total, completed) => {
+                setSubtasks((prev) =>
+                  prev
+                    ? prev
+                    : Array.from({ length: total }, (_, i) => ({
+                        id: String(i),
+                        task_id: task.id,
+                        title: "",
+                        completed: i < completed,
+                        sort_order: i,
+                        created_at: "",
+                      }))
+                );
+              }}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }

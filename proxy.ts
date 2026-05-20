@@ -33,7 +33,9 @@ export async function proxy(request: NextRequest) {
 
   const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/signup");
   const isDashboardRoute =
-    pathname.startsWith("/dashboard") || pathname.startsWith("/groups");
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/groups") ||
+    pathname.startsWith("/my-tasks");
 
   if (!user && isDashboardRoute) {
     const url = request.nextUrl.clone();

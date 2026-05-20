@@ -126,6 +126,7 @@ export interface Database {
           title: string;
           description: string | null;
           status: "todo" | "in_progress" | "done";
+          priority: "low" | "medium" | "high" | "urgent";
           due_date: string | null;
           created_by: string;
           created_at: string;
@@ -139,6 +140,7 @@ export interface Database {
           title: string;
           description?: string | null;
           status?: "todo" | "in_progress" | "done";
+          priority?: "low" | "medium" | "high" | "urgent";
           due_date?: string | null;
           created_by: string;
           created_at?: string;
@@ -152,10 +154,82 @@ export interface Database {
           title?: string;
           description?: string | null;
           status?: "todo" | "in_progress" | "done";
+          priority?: "low" | "medium" | "high" | "urgent";
           due_date?: string | null;
           created_by?: string;
           created_at?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      subtasks: {
+        Row: {
+          id: string;
+          task_id: string;
+          title: string;
+          completed: boolean;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          task_id: string;
+          title: string;
+          completed?: boolean;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          task_id?: string;
+          title?: string;
+          completed?: boolean;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      messages: {
+        Row: {
+          id: string;
+          group_id: string;
+          user_id: string;
+          content: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          group_id: string;
+          user_id: string;
+          content: string;
+          created_at?: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          group_id: string | null;
+          type: "task_assigned" | "task_overdue" | "mention" | "member_joined";
+          message: string;
+          read: boolean;
+          link: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          group_id?: string | null;
+          type: "task_assigned" | "task_overdue" | "mention" | "member_joined";
+          message: string;
+          read?: boolean;
+          link?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          read?: boolean;
         };
         Relationships: [];
       };
@@ -201,5 +275,16 @@ export type Group = Database["public"]["Tables"]["groups"]["Row"];
 export type GroupMember = Database["public"]["Tables"]["group_members"]["Row"];
 export type RubricSection = Database["public"]["Tables"]["rubric_sections"]["Row"];
 export type Task = Database["public"]["Tables"]["tasks"]["Row"];
+export type Subtask = Database["public"]["Tables"]["subtasks"]["Row"];
+export type Message = Database["public"]["Tables"]["messages"]["Row"];
+export type Notification = Database["public"]["Tables"]["notifications"]["Row"];
 export type ContributionLog = Database["public"]["Tables"]["contribution_logs"]["Row"];
 export type User = Database["public"]["Tables"]["users"]["Row"];
+
+export type MessageWithUser = Message & {
+  users: { full_name: string | null; email: string } | null;
+};
+
+export type TaskWithGroup = Task & {
+  groups: { id: string; name: string; course_code: string } | null;
+};

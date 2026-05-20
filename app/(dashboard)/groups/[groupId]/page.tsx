@@ -1,7 +1,9 @@
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import TaskBoard from "@/components/tasks/TaskBoard";
+import { createAdminClient } from "@/lib/supabase/admin";
 import InviteCodeBadge from "@/components/groups/InviteCodeBadge";
+import GroupWorkspace from "@/components/groups/GroupWorkspace";
+import type { MessageWithUser } from "@/lib/supabase/types";
 
 interface Props {
   params: Promise<{ groupId: string }>;
@@ -10,76 +12,62 @@ interface Props {
 export default async function GroupPage({ params }: Props) {
   const { groupId } = await params;
   const supabase = await createClient();
+  const admin = createAdminClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Verify membership
-  const { data: membership } = await supabase
-    .from("group_members")
-    .select("role")
-    .eq("group_id", groupId)
-    .eq("user_id", user.id)
-    .maybeSingle();
-
+  const { data: membership } = await admin
+    .from("group_members").select("role").eq("group_id", groupId).eq("user_id", user.id).maybeSingle();
   if (!membership) notFound();
 
-  // Fetch group details
-  const { data: group } = await supabase
-    .from("groups")
-    .select("*")
-    .eq("id", groupId)
-    .single();
-
+  const { data: group } = await admin.from("groups").select("*").eq("id", groupId).single();
   if (!group) notFound();
 
-  // Fetch rubric sections
-  const { data: rubricSections } = await supabase
-    .from("rubric_sections")
-    .select("*")
-    .eq("group_id", groupId)
-    .order("sort_order");
+  const [
+    { data: rubricSections },
+    { data: tasks },
+    { data: rawMembers },
+    { data: rawMessages },
+  ] = await Promise.all([
+    admin.from("rubric_sections").select("*").eq("group_id", groupId).order("sort_order"),
+    admin.from("tasks").select("*").eq("group_id", groupId).order("created_at"),
+    admin.from("group_members").select("role, user_id, users(id, full_name, email)").eq("group_id", groupId),
+    admin.from("messages").select("*, users(full_name, email)").eq("group_id", groupId).order("created_at", { ascending: true }).limit(50),
+  ]);
 
-  // Fetch tasks
-  const { data: tasks } = await supabase
-    .from("tasks")
-    .select("*")
-    .eq("group_id", groupId)
-    .order("created_at");
-
-  type MemberRow = {
-    role: "owner" | "member";
-    user_id: string;
-    users: { id: string; full_name: string | null; email: string } | null;
-  };
-
-  // Fetch members with user info
-  const { data: rawMembers } = await supabase
-    .from("group_members")
-    .select(`
-      role,
-      user_id,
-      users (
-        id,
-        full_name,
-        email
-      )
-    `)
-    .eq("group_id", groupId);
-
+  type MemberRow = { role: "owner" | "member"; user_id: string; users: { id: string; full_name: string | null; email: string } | null };
   const members = rawMembers as unknown as MemberRow[] | null;
 
+  const memberList = members?.map((m) => ({
+    id: m.user_id,
+    full_name: m.users?.full_name ?? null,
+    email: m.users?.email ?? "",
+  })) ?? [];
+
+  // Aggregate subtask counts for all tasks in one query
+  const taskIds = (tasks ?? []).map((t) => t.id);
+  const subtaskCounts: Record<string, { total: number; completed: number }> = {};
+
+  if (taskIds.length > 0) {
+    const { data: subtaskRows } = await admin
+      .from("subtasks")
+      .select("task_id, completed")
+      .in("task_id", taskIds);
+
+    for (const row of subtaskRows ?? []) {
+      if (!subtaskCounts[row.task_id]) subtaskCounts[row.task_id] = { total: 0, completed: 0 };
+      subtaskCounts[row.task_id].total++;
+      if (row.completed) subtaskCounts[row.task_id].completed++;
+    }
+  }
+
   const daysLeft = group.due_date
-    ? Math.ceil(
-        (new Date(group.due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-      )
+    ? Math.ceil((new Date(group.due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
 
   return (
     <div>
-      {/* Group header */}
       <div className="mb-8">
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
@@ -88,20 +76,8 @@ export default async function GroupPage({ params }: Props) {
                 {group.course_code}
               </span>
               {daysLeft !== null && (
-                <span
-                  className={`text-sm font-medium ${
-                    daysLeft < 3
-                      ? "text-red-500"
-                      : daysLeft < 7
-                      ? "text-amber-500"
-                      : "text-gray-500"
-                  }`}
-                >
-                  {daysLeft > 0
-                    ? `${daysLeft}d left`
-                    : daysLeft === 0
-                    ? "Due today"
-                    : "Overdue"}
+                <span className={`text-sm font-medium ${daysLeft < 3 ? "text-red-500" : daysLeft < 7 ? "text-amber-500" : "text-gray-500"}`}>
+                  {daysLeft > 0 ? `${daysLeft}d left` : daysLeft === 0 ? "Due today" : "Overdue"}
                 </span>
               )}
             </div>
@@ -111,38 +87,27 @@ export default async function GroupPage({ params }: Props) {
           <InviteCodeBadge code={group.invite_code} />
         </div>
 
-        {/* Members row */}
         <div className="mt-4 flex items-center gap-2">
           <span className="text-sm text-gray-500">Members:</span>
           <div className="flex gap-1.5 flex-wrap">
             {members?.map((m) => (
-              <span
-                key={m.user_id}
-                className="text-xs bg-gray-100 text-gray-700 rounded-full px-3 py-1"
-              >
+              <span key={m.user_id} className="text-xs bg-gray-100 text-gray-700 rounded-full px-3 py-1">
                 {m.users?.full_name ?? m.users?.email ?? "Unknown"}
-                {m.role === "owner" && (
-                  <span className="ml-1 text-gray-400">(owner)</span>
-                )}
+                {m.role === "owner" && <span className="ml-1 text-gray-400">(owner)</span>}
               </span>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Task board */}
-      <TaskBoard
+      <GroupWorkspace
         groupId={groupId}
         rubricSections={rubricSections ?? []}
         initialTasks={tasks ?? []}
-        members={
-          members?.map((m) => ({
-            id: m.user_id,
-            full_name: m.users?.full_name ?? null,
-            email: m.users?.email ?? "",
-          })) ?? []
-        }
+        members={memberList}
         currentUserId={user.id}
+        subtaskCounts={subtaskCounts}
+        initialMessages={(rawMessages ?? []) as MessageWithUser[]}
       />
     </div>
   );
