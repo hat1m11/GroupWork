@@ -18,8 +18,16 @@ export async function PATCH(
 
   const body = await req.json();
   const update: { name?: string; assignment_name?: string; due_date?: string | null } = {};
-  if (typeof body.name === "string" && body.name.trim()) update.name = body.name.trim();
-  if (typeof body.assignment_name === "string" && body.assignment_name.trim()) update.assignment_name = body.assignment_name.trim();
+  if (typeof body.name === "string" && body.name.trim()) {
+    const name = body.name.trim().slice(0, 100);
+    if (!name) return NextResponse.json({ error: "Name cannot be empty" }, { status: 400 });
+    update.name = name;
+  }
+  if (typeof body.assignment_name === "string" && body.assignment_name.trim()) {
+    const assignmentName = body.assignment_name.trim().slice(0, 100);
+    if (!assignmentName) return NextResponse.json({ error: "Assignment name cannot be empty" }, { status: 400 });
+    update.assignment_name = assignmentName;
+  }
   if ("due_date" in body) update.due_date = body.due_date || null;
 
   const { data: group, error } = await admin.from("groups").update(update).eq("id", groupId).select().single();

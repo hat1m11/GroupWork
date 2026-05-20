@@ -3,6 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Resource } from "@/lib/supabase/types";
 
+const MAX_RESOURCES = 50;
+const MAX_TITLE = 100;
+const MAX_URL = 500;
+const MAX_DESC = 500;
+
 function detectCategory(url: string): Resource["category"] {
   if (url.includes("docs.google.com/document")) return "doc";
   if (url.includes("docs.google.com/spreadsheets")) return "sheet";
@@ -48,14 +53,48 @@ export async function POST(
   const { data: m } = await admin.from("group_members").select("id").eq("group_id", groupId).eq("user_id", user.id).maybeSingle();
   if (!m) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { title, url, description, task_id } = await req.json();
-  if (!title?.trim() || !url?.trim()) return NextResponse.json({ error: "title and url required" }, { status: 400 });
+  const { count: resourceCount } = await admin
+    .from("resources")
+    .select("*", { count: "exact", head: true })
+    .eq("group_id", groupId);
 
-  const category = detectCategory(url.trim());
+  if ((resourceCount ?? 0) >= MAX_RESOURCES) {
+    return NextResponse.json(
+      { error: `Maximum ${MAX_RESOURCES} resources per group` },
+      { status: 400 }
+    );
+  }
+
+  const { title, url, description, task_id } = await req.json();
+
+  const trimmedTitle = typeof title === "string" ? title.trim().slice(0, MAX_TITLE) : "";
+  const trimmedUrl = typeof url === "string" ? url.trim().slice(0, MAX_URL) : "";
+
+  if (!trimmedTitle || !trimmedUrl) {
+    return NextResponse.json({ error: "title and url required" }, { status: 400 });
+  }
+
+  if (!/^https?:\/\//i.test(trimmedUrl)) {
+    return NextResponse.json({ error: "URL must start with http:// or https://" }, { status: 400 });
+  }
+
+  const trimmedDesc = typeof description === "string"
+    ? description.trim().slice(0, MAX_DESC) || null
+    : null;
+
+  const category = detectCategory(trimmedUrl);
 
   const { data: resource, error } = await admin
     .from("resources")
-    .insert({ group_id: groupId, title: title.trim(), url: url.trim(), category, description: description?.trim() || null, task_id: task_id || null, created_by: user.id })
+    .insert({
+      group_id: groupId,
+      title: trimmedTitle,
+      url: trimmedUrl,
+      category,
+      description: trimmedDesc,
+      task_id: task_id || null,
+      created_by: user.id,
+    })
     .select("*, users(full_name, email)")
     .single();
 

@@ -6,6 +6,7 @@ import { getUser, sanitize, r400, r401, r500 } from "@/lib/api";
 const MAX_NAME = 100;
 const MAX_CODE = 20;
 const MAX_SECTION_TITLE = 100;
+const MAX_OWNED_GROUPS = 10;
 
 export async function POST(request: Request) {
   const user = await getUser();
@@ -13,6 +14,18 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => null);
   if (!body) return r400("Invalid request body");
+
+  const admin = createAdminClient();
+
+  const { count: ownedCount } = await admin
+    .from("group_members")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .eq("role", "owner");
+
+  if ((ownedCount ?? 0) >= MAX_OWNED_GROUPS) {
+    return r400(`You can own a maximum of ${MAX_OWNED_GROUPS} groups`);
+  }
 
   const name = sanitize(body.name, MAX_NAME);
   const courseCode = sanitize(body.course_code, MAX_CODE);
@@ -53,8 +66,6 @@ export async function POST(request: Request) {
   if (Math.abs(totalWeight - 100) > 0.01) {
     return r400(`Rubric weights must sum to 100 (got ${totalWeight.toFixed(1)})`);
   }
-
-  const admin = createAdminClient();
 
   const { data: group, error: groupError } = await admin
     .from("groups")

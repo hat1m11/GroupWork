@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
   const { group_id, content, parent_id } = await request.json();
   if (!group_id || !content?.trim()) return NextResponse.json({ error: "group_id and content required" }, { status: 400 });
-  if (content.length > 4000) return NextResponse.json({ error: "Message too long" }, { status: 400 });
+  if (content.length > 4000) return NextResponse.json({ error: "Message too long (max 4000 characters)" }, { status: 400 });
 
   const { data: membership } = await admin
     .from("group_members").select("id").eq("group_id", group_id).eq("user_id", user.id).maybeSingle();
@@ -50,9 +50,11 @@ export async function POST(request: Request) {
 
   if (error || !message) return NextResponse.json({ error: error?.message ?? "Failed" }, { status: 500 });
 
-  // Handle @mention notifications
+  // Handle @mention notifications (cap at 5 to prevent notification spam)
   const mentionRegex = /@([\w\s]+?)(?=\s|$|@)/g;
-  const mentions = [...content.matchAll(mentionRegex)].map((m) => m[1].trim().toLowerCase());
+  const mentions = [...content.matchAll(mentionRegex)]
+    .map((m) => m[1].trim().toLowerCase())
+    .slice(0, 5);
 
   if (mentions.length > 0) {
     type MemberRow = { user_id: string; users: { full_name: string | null; email: string } | null };

@@ -30,7 +30,9 @@ export async function PATCH(
   const body = await request.json();
   const update: { completed?: boolean; title?: string } = {};
   if (typeof body.completed === "boolean") update.completed = body.completed;
-  if (typeof body.title === "string" && body.title.trim()) update.title = body.title.trim();
+  if (typeof body.title === "string" && body.title.trim()) {
+    update.title = body.title.trim().slice(0, 200);
+  }
 
   const { data: subtask, error } = await admin
     .from("subtasks").update(update).eq("id", subtaskId).select().single();
