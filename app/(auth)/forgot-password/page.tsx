@@ -4,7 +4,7 @@
 // (https://your-app.vercel.app/auth/callback) to
 // Supabase Dashboard → Authentication → URL Configuration → Redirect URLs
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -33,14 +33,14 @@ function MailIcon() {
   );
 }
 
-export default function ForgotPasswordPage() {
+// Separated into its own component so useSearchParams is inside a Suspense boundary
+function ForgotPasswordForm() {
   const searchParams = useSearchParams();
+  const reason = searchParams.get("error");
+
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-
-  // Pre-populate error from ?error= param (set by /auth/callback on expired links)
-  const reason = searchParams.get("error");
   const [error, setError] = useState<string | null>(
     reason ? (LINK_ERRORS[reason] ?? null) : null
   );
@@ -73,6 +73,103 @@ export default function ForgotPasswordPage() {
   }
 
   return (
+    <>
+      {submitted ? (
+        /* ── Success state ── */
+        <div className="text-center mb-6">
+          <div className="flex justify-center mb-4 text-emerald-400">
+            <MailIcon />
+          </div>
+          <h1 className="text-xl font-bold tracking-tight text-gray-50 mb-2">
+            Check your email
+          </h1>
+          <p className="text-sm text-gray-500">
+            We sent a reset link to{" "}
+            <span className="font-medium text-gray-300">{email}</span>. It may
+            take a minute — check your spam folder too.
+          </p>
+        </div>
+      ) : (
+        /* ── Form state ── */
+        <>
+          <div className="text-center mb-6">
+            <h1 className="text-xl font-bold tracking-tight text-gray-50">
+              Reset your password
+            </h1>
+            <p className="mt-1.5 text-sm text-gray-500">
+              Enter your email and we&apos;ll send you a reset link.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1.5">
+                Email
+              </label>
+              <input
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (error && EMAIL_RE.test(e.target.value)) setError(null);
+                }}
+                placeholder="you@university.edu"
+                className={[
+                  "w-full rounded-lg border px-4 py-2.5 text-sm",
+                  "focus:outline-none focus:ring-1 transition-all",
+                  error
+                    ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                    : "focus:border-blue-500 focus:ring-blue-500/20",
+                ].join(" ")}
+                style={{
+                  background: "#0D1424",
+                  color: "var(--ct-t1)",
+                  borderColor: error ? undefined : "#1E2A3A",
+                } as React.CSSProperties}
+              />
+            </div>
+
+            {error && (
+              <div className="flex items-start gap-2.5 rounded-lg px-4 py-3 bg-red-500/10 border border-red-500/20">
+                <svg
+                  className="w-4 h-4 flex-shrink-0 mt-px text-red-400"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <p className="text-sm text-red-400">{error}</p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-lg bg-blue-600 hover:bg-blue-500 px-4 py-2.5 text-white text-sm font-semibold disabled:opacity-60 transition-all flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <Spinner />
+                  Sending…
+                </>
+              ) : (
+                "Send reset link"
+              )}
+            </button>
+          </form>
+        </>
+      )}
+    </>
+  );
+}
+
+export default function ForgotPasswordPage() {
+  return (
     <div className="w-full max-w-sm">
       <div
         className="rounded-2xl p-8 border"
@@ -87,96 +184,9 @@ export default function ForgotPasswordPage() {
           </Link>
         </div>
 
-        {submitted ? (
-          /* ── Success state ── */
-          <div className="text-center mb-6">
-            <div className="flex justify-center mb-4 text-emerald-400">
-              <MailIcon />
-            </div>
-            <h1 className="text-xl font-bold tracking-tight text-gray-50 mb-2">
-              Check your email
-            </h1>
-            <p className="text-sm text-gray-500">
-              We sent a reset link to{" "}
-              <span className="font-medium text-gray-300">{email}</span>. It may
-              take a minute — check your spam folder too.
-            </p>
-          </div>
-        ) : (
-          /* ── Form state ── */
-          <>
-            <div className="text-center mb-6">
-              <h1 className="text-xl font-bold tracking-tight text-gray-50">
-                Reset your password
-              </h1>
-              <p className="mt-1.5 text-sm text-gray-500">
-                Enter your email and we&apos;ll send you a reset link.
-              </p>
-            </div>
-
-            <form onSubmit={handleSubmit} noValidate className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1.5">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    if (error && EMAIL_RE.test(e.target.value)) setError(null);
-                  }}
-                  placeholder="you@university.edu"
-                  className={[
-                    "w-full rounded-lg border px-4 py-2.5 text-sm",
-                    "focus:outline-none focus:ring-1 transition-all",
-                    error
-                      ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
-                      : "focus:border-blue-500 focus:ring-blue-500/20",
-                  ].join(" ")}
-                  style={{
-                    background: "#0D1424",
-                    color: "var(--ct-t1)",
-                    borderColor: error ? undefined : "#1E2A3A",
-                  } as React.CSSProperties}
-                />
-              </div>
-
-              {error && (
-                <div className="flex items-start gap-2.5 rounded-lg px-4 py-3 bg-red-500/10 border border-red-500/20">
-                  <svg
-                    className="w-4 h-4 flex-shrink-0 mt-px text-red-400"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <p className="text-sm text-red-400">{error}</p>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full rounded-lg bg-blue-600 hover:bg-blue-500 px-4 py-2.5 text-white text-sm font-semibold disabled:opacity-60 transition-all flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <Spinner />
-                    Sending…
-                  </>
-                ) : (
-                  "Send reset link"
-                )}
-              </button>
-            </form>
-          </>
-        )}
+        <Suspense>
+          <ForgotPasswordForm />
+        </Suspense>
 
         {/* Back to sign in — always visible */}
         <p className="mt-6 text-center text-sm text-gray-500">
