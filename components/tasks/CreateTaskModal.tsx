@@ -30,7 +30,10 @@ export default function CreateTaskModal({
   const [assignedTo, setAssignedTo] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState<Task["priority"]>("medium");
+  const [tags, setTags] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  const ALL_TAGS = ["research", "writing", "review", "design", "code"];
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -52,6 +55,7 @@ export default function CreateTaskModal({
           assigned_to: assignedTo || null,
           due_date: dueDate || null,
           priority,
+          tags,
         }),
       });
 
@@ -142,6 +146,26 @@ export default function CreateTaskModal({
               Priority
             </label>
             <PrioritySelect value={priority} onChange={setPriority} className="w-full" />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Labels</label>
+            <div className="flex flex-wrap gap-2">
+              {ALL_TAGS.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => setTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])}
+                  className={`text-xs rounded-full px-2.5 py-1 font-medium transition-colors border ${
+                    tags.includes(tag)
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "bg-white text-gray-600 border-gray-200 hover:border-indigo-300"
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
           </div>
 
           {error && (

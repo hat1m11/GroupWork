@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { group_id, content } = await request.json();
+  const { group_id, content, parent_id } = await request.json();
   if (!group_id || !content?.trim()) return NextResponse.json({ error: "group_id and content required" }, { status: 400 });
   if (content.length > 4000) return NextResponse.json({ error: "Message too long" }, { status: 400 });
 
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
 
   const { data: message, error } = await admin
     .from("messages")
-    .insert({ group_id, user_id: user.id, content: content.trim() })
+    .insert({ group_id, user_id: user.id, content: content.trim(), parent_id: parent_id ?? null })
     .select("*, users(full_name, email)")
     .single();
 

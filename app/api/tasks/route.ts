@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { group_id, rubric_section_id, title, assigned_to, due_date, description, priority } = body;
+  const { group_id, rubric_section_id, title, assigned_to, due_date, description, priority, tags } = body;
 
   if (!group_id || !title) {
     return NextResponse.json({ error: "group_id and title are required" }, { status: 400 });
@@ -45,6 +45,7 @@ export async function POST(request: Request) {
       created_by: user.id,
       status: "todo",
       priority: priority ?? "medium",
+      tags: tags ?? [],
     })
     .select()
     .single();

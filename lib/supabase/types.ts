@@ -128,8 +128,9 @@ export interface Database {
           assigned_to: string | null;
           title: string;
           description: string | null;
-          status: "todo" | "in_progress" | "done";
+          status: "todo" | "in_progress" | "done" | "blocked";
           priority: "low" | "medium" | "high" | "urgent";
+          tags: string[];
           due_date: string | null;
           created_by: string;
           created_at: string;
@@ -142,8 +143,9 @@ export interface Database {
           assigned_to?: string | null;
           title: string;
           description?: string | null;
-          status?: "todo" | "in_progress" | "done";
+          status?: "todo" | "in_progress" | "done" | "blocked";
           priority?: "low" | "medium" | "high" | "urgent";
+          tags?: string[];
           due_date?: string | null;
           created_by: string;
           created_at?: string;
@@ -156,8 +158,9 @@ export interface Database {
           assigned_to?: string | null;
           title?: string;
           description?: string | null;
-          status?: "todo" | "in_progress" | "done";
+          status?: "todo" | "in_progress" | "done" | "blocked";
           priority?: "low" | "medium" | "high" | "urgent";
+          tags?: string[];
           due_date?: string | null;
           created_by?: string;
           created_at?: string;
@@ -198,6 +201,8 @@ export interface Database {
           group_id: string;
           user_id: string;
           content: string;
+          pinned: boolean;
+          parent_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -205,9 +210,13 @@ export interface Database {
           group_id: string;
           user_id: string;
           content: string;
+          pinned?: boolean;
+          parent_id?: string | null;
           created_at?: string;
         };
-        Update: never;
+        Update: {
+          pinned?: boolean;
+        };
         Relationships: [];
       };
       notifications: {
@@ -291,6 +300,44 @@ export interface Database {
         Update: never;
         Relationships: [];
       };
+      reactions: {
+        Row: {
+          id: string;
+          message_id: string;
+          user_id: string;
+          emoji: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          message_id: string;
+          user_id: string;
+          emoji: string;
+          created_at?: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
+      group_notes: {
+        Row: {
+          group_id: string;
+          content: string;
+          updated_by: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          group_id: string;
+          content?: string;
+          updated_by?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          content?: string;
+          updated_by?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       contribution_logs: {
         Row: {
           id: string;
@@ -341,8 +388,13 @@ export type Meeting = Database["public"]["Tables"]["meetings"]["Row"];
 export type ContributionLog = Database["public"]["Tables"]["contribution_logs"]["Row"];
 export type User = Database["public"]["Tables"]["users"]["Row"];
 
+export type Reaction = Database["public"]["Tables"]["reactions"]["Row"];
+export type GroupNotes = Database["public"]["Tables"]["group_notes"]["Row"];
+
 export type MessageWithUser = Message & {
   users: { full_name: string | null; email: string } | null;
+  reactions?: Reaction[];
+  replies?: MessageWithUser[];
 };
 
 export type TaskWithGroup = Task & {

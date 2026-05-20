@@ -40,7 +40,10 @@ export default function TaskBoard({
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [createFor, setCreateFor] = useState<string | null>(null);
   const [filterPriority, setFilterPriority] = useState<Task["priority"] | "">("");
+  const [filterTag, setFilterTag] = useState("");
+  const [hideBlocked, setHideBlocked] = useState(false);
   const [sortByPriority, setSortByPriority] = useState(false);
+  const ALL_TAGS = ["research", "writing", "review", "design", "code"];
 
   const handleTaskCreated = useCallback((task: Task) => {
     setTasks((prev) => [...prev, task]);
@@ -100,6 +103,8 @@ export default function TaskBoard({
 
   const visibleTasks = tasks
     .filter((t) => !filterPriority || t.priority === filterPriority)
+    .filter((t) => !filterTag || t.tags.includes(filterTag))
+    .filter((t) => !hideBlocked || t.status !== "blocked")
     .sort((a, b) =>
       sortByPriority ? PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority] : 0
     );
@@ -119,14 +124,21 @@ export default function TaskBoard({
           <option value="medium">Medium</option>
           <option value="low">Low</option>
         </select>
+        <select
+          value={filterTag}
+          onChange={(e) => setFilterTag(e.target.value)}
+          className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none bg-white"
+        >
+          <option value="">All labels</option>
+          {ALL_TAGS.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
         <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={sortByPriority}
-            onChange={(e) => setSortByPriority(e.target.checked)}
-            className="rounded"
-          />
+          <input type="checkbox" checked={sortByPriority} onChange={(e) => setSortByPriority(e.target.checked)} className="rounded" />
           Sort by priority
+        </label>
+        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+          <input type="checkbox" checked={hideBlocked} onChange={(e) => setHideBlocked(e.target.checked)} className="rounded" />
+          Hide blocked
         </label>
       </div>
 

@@ -45,15 +45,16 @@ export async function PATCH(
   type TaskUpdate = {
     title?: string;
     description?: string | null;
-    status?: "todo" | "in_progress" | "done";
+    status?: "todo" | "in_progress" | "done" | "blocked";
     priority?: "low" | "medium" | "high" | "urgent";
+    tags?: string[];
     assigned_to?: string | null;
     rubric_section_id?: string | null;
     due_date?: string | null;
   };
 
   const allowedFields: (keyof TaskUpdate)[] = [
-    "title", "description", "status", "priority", "assigned_to", "rubric_section_id", "due_date",
+    "title", "description", "status", "priority", "tags", "assigned_to", "rubric_section_id", "due_date",
   ];
   const update: TaskUpdate = {};
   for (const field of allowedFields) {
