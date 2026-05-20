@@ -55,15 +55,19 @@ export async function POST(request: Request) {
   const mentions = [...content.matchAll(mentionRegex)].map((m) => m[1].trim().toLowerCase());
 
   if (mentions.length > 0) {
-    const { data: members } = await admin
+    type MemberRow = { user_id: string; users: { full_name: string | null; email: string } | null };
+
+    const { data: rawMembers } = await admin
       .from("group_members")
       .select("user_id, users(full_name, email)")
       .eq("group_id", group_id);
 
-    if (members) {
+    const members = (rawMembers ?? []) as unknown as MemberRow[];
+
+    if (members.length > 0) {
       const notifications = members
         .filter((m) => {
-          const u = m.users as { full_name: string | null; email: string } | null;
+          const u = m.users;
           if (!u || m.user_id === user.id) return false;
           const name = (u.full_name ?? u.email).toLowerCase();
           return mentions.some((mention) => name.includes(mention));

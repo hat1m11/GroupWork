@@ -16,12 +16,14 @@ const STATUS_CYCLE: Record<Task["status"], Task["status"]> = {
   todo: "in_progress",
   in_progress: "done",
   done: "todo",
+  blocked: "todo",
 };
 
 const STATUS_LABEL: Record<Task["status"], string> = {
   todo: "To do",
   in_progress: "In progress",
   done: "Done",
+  blocked: "Blocked",
 };
 
 function dateBucket(due: string | null): string {
