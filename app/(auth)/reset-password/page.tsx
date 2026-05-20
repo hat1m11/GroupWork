@@ -102,11 +102,20 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     const supabase = createClient();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         setReady(true);
       }
     });
+
+    // @supabase/ssr uses PKCE — the email link arrives as ?code=...
+    // exchangeCodeForSession converts it into a session and fires PASSWORD_RECOVERY
+    const code = new URLSearchParams(window.location.search).get("code");
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).catch(() => {});
+    }
+
     return () => subscription.unsubscribe();
   }, []);
 
