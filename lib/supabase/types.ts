@@ -73,6 +73,7 @@ export interface Database {
           user_id: string;
           role: "owner" | "member";
           joined_at: string;
+          last_active_at: string | null;
         };
         Insert: {
           id?: string;
@@ -80,6 +81,7 @@ export interface Database {
           user_id: string;
           role?: "owner" | "member";
           joined_at?: string;
+          last_active_at?: string | null;
         };
         Update: {
           id?: string;
@@ -87,6 +89,7 @@ export interface Database {
           user_id?: string;
           role?: "owner" | "member";
           joined_at?: string;
+          last_active_at?: string | null;
         };
         Relationships: [];
       };
@@ -233,6 +236,61 @@ export interface Database {
         };
         Relationships: [];
       };
+      resources: {
+        Row: {
+          id: string;
+          group_id: string;
+          task_id: string | null;
+          title: string;
+          url: string;
+          category: "doc" | "sheet" | "slide" | "pdf" | "link";
+          description: string | null;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          group_id: string;
+          task_id?: string | null;
+          title: string;
+          url: string;
+          category?: "doc" | "sheet" | "slide" | "pdf" | "link";
+          description?: string | null;
+          created_by: string;
+          created_at?: string;
+        };
+        Update: {
+          title?: string;
+          description?: string | null;
+        };
+        Relationships: [];
+      };
+      meetings: {
+        Row: {
+          id: string;
+          group_id: string;
+          title: string;
+          scheduled_at: string;
+          duration_minutes: number;
+          call_link: string | null;
+          platform: "zoom" | "meet" | "teams" | "other" | null;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          group_id: string;
+          title: string;
+          scheduled_at: string;
+          duration_minutes?: number;
+          call_link?: string | null;
+          platform?: "zoom" | "meet" | "teams" | "other" | null;
+          created_by: string;
+          created_at?: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
       contribution_logs: {
         Row: {
           id: string;
@@ -278,6 +336,8 @@ export type Task = Database["public"]["Tables"]["tasks"]["Row"];
 export type Subtask = Database["public"]["Tables"]["subtasks"]["Row"];
 export type Message = Database["public"]["Tables"]["messages"]["Row"];
 export type Notification = Database["public"]["Tables"]["notifications"]["Row"];
+export type Resource = Database["public"]["Tables"]["resources"]["Row"];
+export type Meeting = Database["public"]["Tables"]["meetings"]["Row"];
 export type ContributionLog = Database["public"]["Tables"]["contribution_logs"]["Row"];
 export type User = Database["public"]["Tables"]["users"]["Row"];
 
@@ -287,4 +347,20 @@ export type MessageWithUser = Message & {
 
 export type TaskWithGroup = Task & {
   groups: { id: string; name: string; course_code: string } | null;
+};
+
+export type ResourceWithUser = Resource & {
+  users: { full_name: string | null; email: string } | null;
+};
+
+export type MeetingWithUser = Meeting & {
+  users: { full_name: string | null; email: string } | null;
+};
+
+export type MemberWithPresence = {
+  user_id: string;
+  role: "owner" | "member";
+  joined_at: string;
+  last_active_at: string | null;
+  users: { id: string; full_name: string | null; email: string } | null;
 };

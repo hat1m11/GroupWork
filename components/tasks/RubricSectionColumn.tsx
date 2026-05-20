@@ -15,10 +15,12 @@ interface Props {
   members: Member[];
   progress: number;
   currentUserId: string;
+  isOwner?: boolean;
   subtaskCounts: Record<string, { total: number; completed: number }>;
   onCreateTask: () => void;
   onStatusChange: (taskId: string, status: Task["status"]) => void;
   onPriorityChange: (taskId: string, priority: Task["priority"]) => void;
+  onReassign?: (taskId: string, userId: string | null) => void;
   onDeleteTask: (taskId: string) => void;
 }
 
@@ -28,10 +30,12 @@ export default function RubricSectionColumn({
   members,
   progress,
   currentUserId,
+  isOwner = false,
   subtaskCounts,
   onCreateTask,
   onStatusChange,
   onPriorityChange,
+  onReassign,
   onDeleteTask,
 }: Props) {
   const todo = tasks.filter((t) => t.status === "todo");
@@ -94,9 +98,11 @@ export default function RubricSectionColumn({
                   task={task}
                   members={members}
                   currentUserId={currentUserId}
+                  isOwner={isOwner}
                   subtaskCount={subtaskCounts[task.id]}
                   onStatusChange={onStatusChange}
                   onPriorityChange={onPriorityChange}
+                  onReassign={onReassign}
                   onDelete={onDeleteTask}
                 />
               ))}

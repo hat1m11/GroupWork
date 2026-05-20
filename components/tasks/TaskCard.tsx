@@ -28,9 +28,11 @@ interface Props {
   task: Task;
   members: Member[];
   currentUserId: string;
+  isOwner?: boolean;
   subtaskCount?: { total: number; completed: number };
   onStatusChange: (taskId: string, status: Task["status"]) => void;
   onPriorityChange: (taskId: string, priority: Task["priority"]) => void;
+  onReassign?: (taskId: string, userId: string | null) => void;
   onDelete: (taskId: string) => void;
 }
 
@@ -38,9 +40,11 @@ export default function TaskCard({
   task,
   members,
   currentUserId,
+  isOwner = false,
   subtaskCount,
   onStatusChange,
   onPriorityChange,
+  onReassign,
   onDelete,
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -125,7 +129,7 @@ export default function TaskCard({
                   : "bg-gray-100 text-gray-500"
               }`}
             >
-              {new Date(task.due_date).toLocaleDateString(undefined, {
+              {new Date(task.due_date).toLocaleDateString("en-GB", {
                 month: "short",
                 day: "numeric",
               })}
@@ -162,6 +166,26 @@ export default function TaskCard({
                     {s.label}
                   </button>
                 ))}
+                {isOwner && onReassign && (
+                  <div className="border-t border-gray-100 mt-1 pt-1">
+                    <p className="px-3 py-1 text-xs font-semibold text-gray-400 uppercase">Reassign to</p>
+                    <button
+                      onClick={() => { onReassign(task.id, null); setMenuOpen(false); }}
+                      className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      Unassigned
+                    </button>
+                    {members.filter((m) => m.id !== task.assigned_to).map((m) => (
+                      <button
+                        key={m.id}
+                        onClick={() => { onReassign(task.id, m.id); setMenuOpen(false); }}
+                        className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        {m.full_name ?? m.email.split("@")[0]}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <div className="border-t border-gray-100 mt-1 pt-1">
                   <p className="px-3 py-1 text-xs font-semibold text-gray-400 uppercase">Priority</p>
                   {PRIORITY_OPTIONS.filter((p) => p.value !== task.priority).map((p) => (

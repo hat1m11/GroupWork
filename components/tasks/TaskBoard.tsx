@@ -17,6 +17,7 @@ interface Props {
   initialTasks: Task[];
   members: Member[];
   currentUserId: string;
+  isOwner?: boolean;
   subtaskCounts?: Record<string, { total: number; completed: number }>;
 }
 
@@ -33,6 +34,7 @@ export default function TaskBoard({
   initialTasks,
   members,
   currentUserId,
+  isOwner = false,
   subtaskCounts = {},
 }: Props) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
@@ -81,6 +83,15 @@ export default function TaskBoard({
     },
     []
   );
+
+  const handleReassign = useCallback(async (taskId: string, userId: string | null) => {
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, assigned_to: userId } : t)));
+    await fetch(`/api/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ assigned_to: userId }),
+    });
+  }, []);
 
   const handleDeleteTask = useCallback(async (taskId: string) => {
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
@@ -137,10 +148,12 @@ export default function TaskBoard({
             members={members}
             progress={progress}
             currentUserId={currentUserId}
+            isOwner={isOwner}
             subtaskCounts={subtaskCounts}
             onCreateTask={() => setCreateFor(section.id)}
             onStatusChange={handleStatusChange}
             onPriorityChange={handlePriorityChange}
+            onReassign={handleReassign}
             onDeleteTask={handleDeleteTask}
           />
         );

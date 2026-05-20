@@ -162,7 +162,7 @@ export default function MyTasksBoard({ tasks: initial, currentUserId }: Props) {
                                 : "bg-gray-100 text-gray-500"
                             }`}
                           >
-                            {new Date(task.due_date).toLocaleDateString(undefined, {
+                            {new Date(task.due_date).toLocaleDateString("en-GB", {
                               month: "short",
                               day: "numeric",
                             })}

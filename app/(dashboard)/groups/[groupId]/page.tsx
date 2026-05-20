@@ -1,9 +1,9 @@
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import InviteCodeBadge from "@/components/groups/InviteCodeBadge";
+import GroupHeader from "@/components/groups/GroupHeader";
 import GroupWorkspace from "@/components/groups/GroupWorkspace";
-import type { MessageWithUser } from "@/lib/supabase/types";
+import type { MessageWithUser, MemberWithPresence, ResourceWithUser, MeetingWithUser } from "@/lib/supabase/types";
 
 interface Props {
   params: Promise<{ groupId: string }>;
@@ -24,20 +24,25 @@ export default async function GroupPage({ params }: Props) {
   const { data: group } = await admin.from("groups").select("*").eq("id", groupId).single();
   if (!group) notFound();
 
+  const isOwner = membership.role === "owner";
+
   const [
     { data: rubricSections },
     { data: tasks },
     { data: rawMembers },
     { data: rawMessages },
+    { data: rawResources },
+    { data: rawMeetings },
   ] = await Promise.all([
     admin.from("rubric_sections").select("*").eq("group_id", groupId).order("sort_order"),
     admin.from("tasks").select("*").eq("group_id", groupId).order("created_at"),
-    admin.from("group_members").select("role, user_id, users(id, full_name, email)").eq("group_id", groupId),
+    admin.from("group_members").select("role, user_id, joined_at, last_active_at, users(id, full_name, email)").eq("group_id", groupId),
     admin.from("messages").select("*, users(full_name, email)").eq("group_id", groupId).order("created_at", { ascending: true }).limit(50),
+    admin.from("resources").select("*, users(full_name, email)").eq("group_id", groupId).order("created_at", { ascending: false }),
+    admin.from("meetings").select("*, users(full_name, email)").eq("group_id", groupId).order("scheduled_at", { ascending: true }),
   ]);
 
-  type MemberRow = { role: "owner" | "member"; user_id: string; users: { id: string; full_name: string | null; email: string } | null };
-  const members = rawMembers as unknown as MemberRow[] | null;
+  const members = rawMembers as unknown as MemberWithPresence[] | null;
 
   const memberList = members?.map((m) => ({
     id: m.user_id,
@@ -45,15 +50,13 @@ export default async function GroupPage({ params }: Props) {
     email: m.users?.email ?? "",
   })) ?? [];
 
-  // Aggregate subtask counts for all tasks in one query
+  // Aggregate subtask counts
   const taskIds = (tasks ?? []).map((t) => t.id);
   const subtaskCounts: Record<string, { total: number; completed: number }> = {};
 
   if (taskIds.length > 0) {
     const { data: subtaskRows } = await admin
-      .from("subtasks")
-      .select("task_id, completed")
-      .in("task_id", taskIds);
+      .from("subtasks").select("task_id, completed").in("task_id", taskIds);
 
     for (const row of subtaskRows ?? []) {
       if (!subtaskCounts[row.task_id]) subtaskCounts[row.task_id] = { total: 0, completed: 0 };
@@ -62,43 +65,20 @@ export default async function GroupPage({ params }: Props) {
     }
   }
 
-  const daysLeft = group.due_date
-    ? Math.ceil((new Date(group.due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-    : null;
+  // Compute overdue tasks server-side
+  const today = new Date().toISOString().slice(0, 10);
+  const overdueTasks = (tasks ?? []).filter(
+    (t) => t.status !== "done" && t.due_date !== null && t.due_date < today
+  );
 
   return (
     <div>
-      <div className="mb-8">
-        <div className="flex items-start justify-between flex-wrap gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <span className="text-sm font-medium text-indigo-600 bg-indigo-50 px-3 py-0.5 rounded-full">
-                {group.course_code}
-              </span>
-              {daysLeft !== null && (
-                <span className={`text-sm font-medium ${daysLeft < 3 ? "text-red-500" : daysLeft < 7 ? "text-amber-500" : "text-gray-500"}`}>
-                  {daysLeft > 0 ? `${daysLeft}d left` : daysLeft === 0 ? "Due today" : "Overdue"}
-                </span>
-              )}
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">{group.name}</h1>
-            <p className="text-gray-500 mt-0.5">{group.assignment_name}</p>
-          </div>
-          <InviteCodeBadge code={group.invite_code} />
-        </div>
-
-        <div className="mt-4 flex items-center gap-2">
-          <span className="text-sm text-gray-500">Members:</span>
-          <div className="flex gap-1.5 flex-wrap">
-            {members?.map((m) => (
-              <span key={m.user_id} className="text-xs bg-gray-100 text-gray-700 rounded-full px-3 py-1">
-                {m.users?.full_name ?? m.users?.email ?? "Unknown"}
-                {m.role === "owner" && <span className="ml-1 text-gray-400">(owner)</span>}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
+      <GroupHeader
+        group={group}
+        members={members ?? []}
+        currentUserId={user.id}
+        isOwner={isOwner}
+      />
 
       <GroupWorkspace
         groupId={groupId}
@@ -106,8 +86,12 @@ export default async function GroupPage({ params }: Props) {
         initialTasks={tasks ?? []}
         members={memberList}
         currentUserId={user.id}
+        isOwner={isOwner}
         subtaskCounts={subtaskCounts}
         initialMessages={(rawMessages ?? []) as MessageWithUser[]}
+        initialResources={(rawResources ?? []) as ResourceWithUser[]}
+        initialMeetings={(rawMeetings ?? []) as MeetingWithUser[]}
+        overdueTasks={overdueTasks}
       />
     </div>
   );
