@@ -1,0 +1,42 @@
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
+import LogoutButton from "@/components/ui/LogoutButton";
+
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect("/login");
+
+  const { data: profile } = await supabase
+    .from("users")
+    .select("full_name, email")
+    .eq("id", user.id)
+    .single();
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+          <Link href="/dashboard" className="text-xl font-bold text-indigo-600">
+            GroupWork
+          </Link>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600">
+              {profile?.full_name ?? profile?.email ?? user.email}
+            </span>
+            <LogoutButton />
+          </div>
+        </div>
+      </header>
+      <main className="max-w-6xl mx-auto px-4 py-8">{children}</main>
+    </div>
+  );
+}
