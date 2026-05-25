@@ -112,7 +112,7 @@ export default function TaskBoard({
     .sort((a, b) => sortByPriority ? PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority] : 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Toolbar */}
       <div className="flex items-center gap-2 rounded-xl px-3 py-2 border" style={{ background: "var(--ct-surf)", borderColor: "var(--ct-bd)" }}>
 
