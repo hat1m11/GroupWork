@@ -7,6 +7,40 @@ import { createClient } from "@/lib/supabase/client";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
+// ── Domain typo suggester ──────────────────────────────────────────────────
+const KNOWN_DOMAINS = [
+  "gmail.com","yahoo.com","hotmail.com","outlook.com","icloud.com",
+  "me.com","live.com","protonmail.com","proton.me","googlemail.com",
+  "msn.com","hotmail.co.uk","yahoo.co.uk",
+];
+
+function levenshtein(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, (_, i) =>
+    Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+  );
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1]
+        ? dp[i-1][j-1]
+        : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+function suggestDomain(email: string): string | null {
+  const at = email.lastIndexOf("@");
+  if (at < 1) return null;
+  const typed = email.slice(at + 1).toLowerCase();
+  if (!typed || KNOWN_DOMAINS.includes(typed)) return null;
+  let best: string | null = null, bestDist = Infinity;
+  for (const d of KNOWN_DOMAINS) {
+    const dist = levenshtein(typed, d);
+    if (dist < bestDist) { bestDist = dist; best = d; }
+  }
+  // Only suggest if within 2 edits and meaningfully different
+  return bestDist <= 2 && bestDist > 0 ? `${email.slice(0, at + 1)}${best}` : null;
+}
+
 function hasUpper(s: string)  { return /[A-Z]/.test(s); }
 function hasLower(s: string)  { return /[a-z]/.test(s); }
 function hasNumber(s: string) { return /[0-9]/.test(s); }
@@ -101,6 +135,7 @@ export default function SignupPage() {
   const [loading,         setLoading]         = useState(false);
   const [serverError,     setServerError]     = useState<string | null>(null);
   const [emailTaken,      setEmailTaken]      = useState(false);
+  const [emailSuggestion, setEmailSuggestion] = useState<string | null>(null);
 
   // ── Validation ──
   const nameError = (() => {
@@ -155,6 +190,7 @@ export default function SignupPage() {
 
     setServerError(null);
     setEmailTaken(false);
+    setEmailSuggestion(null);
     setLoading(true);
 
     try {
@@ -236,8 +272,18 @@ export default function SignupPage() {
               type="email"
               autoComplete="email"
               value={email}
-              onChange={(e) => { setEmail(e.target.value); setEmailTaken(false); }}
-              onBlur={() => touch("email")}
+              onChange={(e) => {
+                const val = e.target.value.toLowerCase();
+                setEmail(val);
+                setEmailTaken(false);
+                setEmailSuggestion(null);
+              }}
+              onBlur={() => {
+                const trimmed = email.trim();
+                if (trimmed !== email) setEmail(trimmed);
+                touch("email");
+                setEmailSuggestion(suggestDomain(trimmed || email));
+              }}
               placeholder="you@university.edu"
               {...fieldProps(!!(emailError || emailTaken))}
             />
@@ -255,6 +301,23 @@ export default function SignupPage() {
               </p>
             ) : emailError ? (
               <FieldErr msg={emailError} />
+            ) : emailSuggestion ? (
+              <p className="mt-1.5 text-xs text-amber-500 flex items-start gap-1">
+                <svg className="w-3 h-3 flex-shrink-0 mt-px" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <span>
+                  Did you mean{" "}
+                  <button
+                    type="button"
+                    className="underline underline-offset-2 font-medium cursor-pointer hover:text-amber-400 transition-colors"
+                    onClick={() => { setEmail(emailSuggestion); setEmailSuggestion(null); }}
+                  >
+                    {emailSuggestion}
+                  </button>
+                  ?
+                </span>
+              </p>
             ) : null}
           </div>
 
