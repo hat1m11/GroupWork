@@ -338,6 +338,28 @@ export interface Database {
         };
         Relationships: [];
       };
+      calendar_events: {
+        Row: {
+          id: string;
+          group_id: string;
+          created_by: string;
+          type: "meeting" | "deadline" | "custom";
+          title: string;
+          date: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          group_id: string;
+          created_by: string;
+          type: "meeting" | "deadline" | "custom";
+          title: string;
+          date: string;
+          created_at?: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
       contribution_logs: {
         Row: {
           id: string;
@@ -386,6 +408,7 @@ export type Notification = Database["public"]["Tables"]["notifications"]["Row"];
 export type Resource = Database["public"]["Tables"]["resources"]["Row"];
 export type Meeting = Database["public"]["Tables"]["meetings"]["Row"];
 export type ContributionLog = Database["public"]["Tables"]["contribution_logs"]["Row"];
+export type CalendarEvent = Database["public"]["Tables"]["calendar_events"]["Row"];
 export type User = Database["public"]["Tables"]["users"]["Row"];
 
 export type Reaction = Database["public"]["Tables"]["reactions"]["Row"];

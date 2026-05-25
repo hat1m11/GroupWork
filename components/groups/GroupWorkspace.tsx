@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { RubricSection, Task, MessageWithUser, ResourceWithUser, MeetingWithUser } from "@/lib/supabase/types";
+import type { RubricSection, Task, MessageWithUser, ResourceWithUser, MeetingWithUser, CalendarEvent } from "@/lib/supabase/types";
 import TaskBoard from "@/components/tasks/TaskBoard";
 import ChatPanel from "@/components/chat/ChatPanel";
 import ResourcesPanel from "./ResourcesPanel";
@@ -28,6 +28,7 @@ interface Props {
   initialMessages: MessageWithUser[];
   initialResources: ResourceWithUser[];
   initialMeetings: MeetingWithUser[];
+  initialCalendarEvents: CalendarEvent[];
   overdueTasks: Task[];
 }
 
@@ -71,10 +72,25 @@ const TABS: { id: Tab; label: string }[] = [
 
 export default function GroupWorkspace({
   groupId, rubricSections, initialTasks, members, currentUserId, isOwner,
-  subtaskCounts, initialMessages, initialResources, initialMeetings, overdueTasks,
+  subtaskCounts, initialMessages, initialResources, initialMeetings, initialCalendarEvents, overdueTasks,
 }: Props) {
+  const VALID_TABS: Tab[] = ["board", "chat", "calendar", "workload", "resources", "meetings", "activity", "notes"];
   const [tab, setTab] = useState<Tab>("board");
   const [dismissed, setDismissed] = useState(false);
+
+  // Restore tab from URL on mount, and keep URL in sync on change
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const t = params.get("tab") as Tab;
+    if (t && VALID_TABS.includes(t)) setTab(t);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function changeTab(newTab: Tab) {
+    setTab(newTab);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", newTab);
+    window.history.replaceState(null, "", url.toString());
+  }
 
   useEffect(() => {
     fetch(`/api/groups/${groupId}/presence`, { method: "PATCH" });
@@ -97,7 +113,7 @@ export default function GroupWorkspace({
         {TABS.map((t) => (
           <button
             key={t.id}
-            onClick={() => setTab(t.id)}
+            onClick={() => changeTab(t.id)}
             className={`flex items-center gap-1.5 px-3.5 py-2.5 text-sm font-medium transition-all duration-150 border-b-2 -mb-px whitespace-nowrap flex-shrink-0 rounded-t-md ${
               tab === t.id
                 ? "border-blue-500 text-blue-400 bg-blue-500/5"
@@ -133,7 +149,14 @@ export default function GroupWorkspace({
           />
         </div>
       )}
-      {tab === "calendar" && <CalendarView groupId={groupId} tasks={initialTasks} />}
+      {tab === "calendar" && (
+        <CalendarView
+          groupId={groupId}
+          tasks={initialTasks}
+          initialEvents={initialCalendarEvents}
+          currentUserId={currentUserId}
+        />
+      )}
       {tab === "workload" && <WorkloadView tasks={initialTasks} members={members} />}
       {tab === "resources" && (
         <ResourcesPanel

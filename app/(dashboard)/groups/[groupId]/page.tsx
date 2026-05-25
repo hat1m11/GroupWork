@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import GroupHeader from "@/components/groups/GroupHeader";
 import GroupWorkspace from "@/components/groups/GroupWorkspace";
-import type { MessageWithUser, MemberWithPresence, ResourceWithUser, MeetingWithUser } from "@/lib/supabase/types";
+import type { MessageWithUser, MemberWithPresence, ResourceWithUser, MeetingWithUser, CalendarEvent } from "@/lib/supabase/types";
 
 interface Props {
   params: Promise<{ groupId: string }>;
@@ -33,6 +33,7 @@ export default async function GroupPage({ params }: Props) {
     { data: rawMessages },
     { data: rawResources },
     { data: rawMeetings },
+    { data: rawCalendarEvents },
   ] = await Promise.all([
     admin.from("rubric_sections").select("*").eq("group_id", groupId).order("sort_order"),
     admin.from("tasks").select("*").eq("group_id", groupId).order("created_at"),
@@ -40,6 +41,7 @@ export default async function GroupPage({ params }: Props) {
     admin.from("messages").select("*, users(full_name, email)").eq("group_id", groupId).order("created_at", { ascending: true }).limit(50),
     admin.from("resources").select("*, users(full_name, email)").eq("group_id", groupId).order("created_at", { ascending: false }),
     admin.from("meetings").select("*, users(full_name, email)").eq("group_id", groupId).order("scheduled_at", { ascending: true }),
+    admin.from("calendar_events").select("*").eq("group_id", groupId).order("date", { ascending: true }),
   ]);
 
   const members = rawMembers as unknown as MemberWithPresence[] | null;
@@ -91,6 +93,7 @@ export default async function GroupPage({ params }: Props) {
         initialMessages={(rawMessages ?? []) as MessageWithUser[]}
         initialResources={(rawResources ?? []) as ResourceWithUser[]}
         initialMeetings={(rawMeetings ?? []) as MeetingWithUser[]}
+        initialCalendarEvents={(rawCalendarEvents ?? []) as CalendarEvent[]}
         overdueTasks={overdueTasks}
       />
     </div>
