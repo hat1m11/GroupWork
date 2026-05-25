@@ -191,7 +191,7 @@ export default function SignupPage() {
       {/* ── Card ── */}
       <div
         className="rounded-2xl p-8 border"
-        style={{ background: "#111827", borderColor: "#1E2A3A" }}
+        style={{ background: "var(--ct-surf)", borderColor: "var(--ct-bd)" }}
       >
         {/* Header */}
         <div className="mb-7 text-center">
@@ -200,8 +200,8 @@ export default function SignupPage() {
               <span className="text-white text-[11px] font-extrabold tracking-tight">GW</span>
             </div>
           </Link>
-          <h1 className="text-xl font-bold tracking-tight text-gray-50">Create your account</h1>
-          <p className="mt-1.5 text-sm text-gray-500">Free forever for students</p>
+          <h1 className="text-xl font-bold tracking-tight" style={{ color: "var(--ct-t1)" }}>Create your account</h1>
+          <p className="mt-1.5 text-sm" style={{ color: "var(--ct-t3)" }}>Free forever for students</p>
         </div>
 
         <form onSubmit={handleSubmit} noValidate className="space-y-5">
@@ -209,7 +209,7 @@ export default function SignupPage() {
           {/* Full name */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-sm font-medium text-gray-400">Full name</label>
+              <label className="text-sm font-medium" style={{ color: "var(--ct-t2)" }}>Full name</label>
               {fullName.length > 15 && (
                 <span className="text-xs tabular-nums" style={{ color: fullName.length > 20 ? "#EF4444" : "var(--ct-t3)" }}>
                   {fullName.length}/20
@@ -231,7 +231,7 @@ export default function SignupPage() {
 
           {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1.5">Email</label>
+            <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--ct-t2)" }}>Email</label>
             <input
               type="email"
               autoComplete="email"
@@ -260,7 +260,7 @@ export default function SignupPage() {
 
           {/* Password */}
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1.5">Password</label>
+            <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--ct-t2)" }}>Password</label>
             <div className="relative">
               <input
                 type={showPw ? "text" : "password"}
@@ -285,7 +285,7 @@ export default function SignupPage() {
               <button
                 type="button"
                 onClick={() => setShowPw((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors cursor-pointer"
                 style={{ color: "var(--ct-t3)" }}
                 tabIndex={-1}
                 aria-label={showPw ? "Hide password" : "Show password"}
@@ -323,7 +323,7 @@ export default function SignupPage() {
 
           {/* Confirm password */}
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1.5">Confirm password</label>
+            <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--ct-t2)" }}>Confirm password</label>
             <div className="relative">
               <input
                 type={showConfirm ? "text" : "password"}
@@ -350,7 +350,7 @@ export default function SignupPage() {
               <button
                 type="button"
                 onClick={() => setShowConfirm((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors cursor-pointer"
                 style={{ color: "var(--ct-t3)" }}
                 tabIndex={-1}
                 aria-label={showConfirm ? "Hide password" : "Show password"}
@@ -390,7 +390,7 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-blue-500 hover:bg-blue-600 active:scale-[0.98] px-4 py-3.5 text-white text-sm font-semibold disabled:opacity-60 transition-all duration-150 flex items-center justify-center gap-2"
+            className="w-full rounded-lg bg-blue-500 hover:bg-blue-600 active:scale-[0.98] px-4 py-3.5 text-white text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 flex items-center justify-center gap-2"
             style={{ boxShadow: loading ? "none" : "0 0 20px rgba(59,130,246,0.25)" }}
           >
             {loading ? (
@@ -402,7 +402,7 @@ export default function SignupPage() {
           </button>
         </form>
 
-        <p className="mt-5 text-center text-sm text-gray-500">
+        <p className="mt-5 text-center text-sm" style={{ color: "var(--ct-t3)" }}>
           Already have an account?{" "}
           <Link href="/login" className="text-blue-400 font-medium hover:text-blue-300 transition-colors">
             Sign in
