@@ -184,6 +184,207 @@ html.light .bg-\[\#1E2A3A\]\/50 { background-color: rgba(241,245,249,0.8) !impor
 .scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 
+/* ══════════════════════════════════════════
+   Tiptap / ProseMirror — Notes editor
+   All rules are scoped to .prose-notes so
+   they don't leak into other page content.
+   ══════════════════════════════════════════ */
+
+/* Base */
+.prose-notes {
+  outline: none;
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--ct-t1);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  word-break: break-word;
+}
+
+/* Block spacing */
+.prose-notes > * + * { margin-top: 0.6em; }
+
+/* Headings */
+.prose-notes h1 {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  margin-top: 1.4em;
+  margin-bottom: 0.25em;
+  color: var(--ct-t1);
+}
+.prose-notes h2 {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 1.2em;
+  margin-bottom: 0.2em;
+  color: var(--ct-t1);
+}
+.prose-notes h3 {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 1em;
+  margin-bottom: 0.15em;
+  color: var(--ct-t1);
+}
+.prose-notes h1:first-child,
+.prose-notes h2:first-child,
+.prose-notes h3:first-child { margin-top: 0; }
+
+/* Paragraph */
+.prose-notes p { margin: 0 0 0.6em; }
+.prose-notes p:last-child { margin-bottom: 0; }
+
+/* Lists */
+.prose-notes ul { list-style: disc; padding-left: 1.6em; margin: 0.5em 0; }
+.prose-notes ol { list-style: decimal; padding-left: 1.6em; margin: 0.5em 0; }
+.prose-notes li { margin: 0.2em 0; }
+.prose-notes li > p { margin: 0; }
+
+/* Task list */
+.prose-notes ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.5em 0;
+}
+.prose-notes ul[data-type="taskList"] > li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0.35em 0;
+}
+.prose-notes ul[data-type="taskList"] > li > label {
+  flex-shrink: 0;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+}
+.prose-notes ul[data-type="taskList"] > li > label > input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  border-radius: 3px;
+  accent-color: #6E56CF;
+  cursor: pointer;
+  transition: opacity 120ms ease;
+}
+.prose-notes ul[data-type="taskList"] > li[data-checked="true"] > div {
+  opacity: 0.55;
+}
+.prose-notes ul[data-type="taskList"] > li > div {
+  flex: 1;
+  min-width: 0;
+}
+.prose-notes ul[data-type="taskList"] > li > div > p { margin: 0; }
+
+/* Inline code */
+.prose-notes code {
+  font-family: ui-monospace, 'Cascadia Code', 'JetBrains Mono', monospace;
+  font-size: 13px;
+  background: rgba(110, 86, 207, 0.1);
+  color: #6E56CF;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+/* Code block */
+.prose-notes pre {
+  background: var(--ct-nav);
+  border: 1px solid var(--ct-bd);
+  border-radius: 8px;
+  padding: 16px 20px;
+  overflow-x: auto;
+  margin: 1em 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.prose-notes pre code {
+  background: transparent;
+  padding: 0;
+  color: var(--ct-t1);
+  font-size: inherit;
+  border-radius: 0;
+}
+
+/* Blockquote */
+.prose-notes blockquote {
+  border-left: 3px solid #6E56CF;
+  padding-left: 1em;
+  margin-left: 0;
+  margin-right: 0;
+  color: var(--ct-t2);
+  font-style: italic;
+}
+.prose-notes blockquote p { margin: 0; }
+
+/* Horizontal rule */
+.prose-notes hr {
+  border: none;
+  border-top: 1px solid var(--ct-bd);
+  margin: 1.5em 0;
+}
+
+/* Links */
+.prose-notes a {
+  color: #6E56CF;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 120ms ease;
+}
+.prose-notes a:hover { border-bottom-color: #6E56CF; }
+
+/* Placeholder */
+.prose-notes.is-editor-empty > p:first-child::before,
+.prose-notes p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--ct-t3);
+  opacity: 0.55;
+  pointer-events: none;
+  height: 0;
+}
+
+/* Text selection */
+.prose-notes ::selection { background: rgba(110, 86, 207, 0.2); }
+.prose-notes ::-moz-selection { background: rgba(110, 86, 207, 0.2); }
+
+/* Cursor — always text inside editor, no resize handles */
+.prose-notes,
+.prose-notes * { cursor: text; }
+
+/* ── Print / PDF export ──────────────────────────── */
+@media print {
+  /* Hide everything, then un-hide only the editor content */
+  body * { visibility: hidden; }
+  .note-print-content,
+  .note-print-content * { visibility: visible; }
+
+  .note-print-content {
+    position: fixed;
+    inset: 0;
+    padding: 25mm;
+    background: white !important;
+    color: black !important;
+    font-size: 11pt;
+    line-height: 1.7;
+    box-shadow: none !important;
+    max-width: 100% !important;
+  }
+
+  /* Headings scale for print */
+  .note-print-content h1 { font-size: 22pt; }
+  .note-print-content h2 { font-size: 17pt; }
+  .note-print-content h3 { font-size: 13pt; }
+  .note-print-content code { font-size: 9pt; }
+  .note-print-content pre { font-size: 9pt; }
+
+  @page {
+    size: A4;
+    margin: 0; /* We control margins via padding above */
+  }
+}
+
 /* ── Buttons: pointer cursor + smooth hover fade ── */
 button, [role="button"] {
   cursor: pointer;
