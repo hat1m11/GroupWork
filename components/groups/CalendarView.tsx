@@ -92,6 +92,7 @@ export default function CalendarView({ groupId, tasks, initialEvents, currentUse
   const [modal, setModal]       = useState<{ date: string } | null>(null);
   const [evtTitle, setEvtTitle] = useState("");
   const [evtType, setEvtType]   = useState<CalendarEvent["type"]>("custom");
+  const [evtDate, setEvtDate]   = useState("");
   const [saving, setSaving]     = useState(false);
   const [saveError, setSaveError] = useState("");
 
@@ -129,6 +130,7 @@ export default function CalendarView({ groupId, tasks, initialEvents, currentUse
     setModal({ date });
     setEvtTitle("");
     setEvtType("custom");
+    setEvtDate(date);
     setSaveError("");
   }
   function closeModal() {
@@ -144,10 +146,14 @@ export default function CalendarView({ groupId, tasks, initialEvents, currentUse
     setSaving(true);
     setSaveError("");
     try {
+      const dateToSave = evtDate || modal.date;
+      if (!dateToSave || !/^\d{4}-\d{2}-\d{2}$/.test(dateToSave)) {
+        setSaveError("Please pick a valid date."); setSaving(false); return;
+      }
       const res = await fetch(`/api/groups/${groupId}/calendar-events`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: t, type: evtType, date: modal.date }),
+        body: JSON.stringify({ title: t, type: evtType, date: dateToSave }),
       });
       const data = await res.json();
       if (!res.ok) { setSaveError(data.error ?? "Failed to save."); return; }
@@ -383,10 +389,7 @@ export default function CalendarView({ groupId, tasks, initialEvents, currentUse
           >
             {/* Modal header */}
             <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "var(--ct-bd)" }}>
-              <div>
-                <h3 className="font-semibold text-gray-100 text-sm">Add to Calendar</h3>
-                <p className="text-xs mt-0.5" style={{ color: "var(--ct-t3)" }}>{formatDate(modal.date)}</p>
-              </div>
+              <h3 className="font-semibold text-gray-100 text-sm">Add to Calendar</h3>
               <button
                 onClick={closeModal}
                 className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-gray-300 transition-colors"
@@ -398,6 +401,31 @@ export default function CalendarView({ groupId, tasks, initialEvents, currentUse
             </div>
 
             <div className="px-6 py-5 space-y-5">
+              {/* Date */}
+              <div className="space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500">Date</p>
+                <div className="relative">
+                  <svg
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
+                    style={{ color: "var(--ct-t3)" }}
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                  </svg>
+                  <input
+                    type="date"
+                    value={evtDate}
+                    onChange={(e) => setEvtDate(e.target.value)}
+                    className="w-full pl-9 pr-3.5 py-2.5 rounded-xl text-sm text-gray-100 outline-none appearance-none"
+                    style={{
+                      background: "var(--ct-surf)",
+                      border: "1px solid var(--ct-bd)",
+                      colorScheme: "dark",
+                    }}
+                  />
+                </div>
+              </div>
+
               {/* Type selector */}
               <div className="space-y-2">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500">Event type</p>

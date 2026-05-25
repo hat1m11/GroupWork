@@ -7,10 +7,16 @@ import type { MessageWithUser, MemberWithPresence, ResourceWithUser, MeetingWith
 
 interface Props {
   params: Promise<{ groupId: string }>;
+  searchParams: Promise<Record<string, string>>;
 }
 
-export default async function GroupPage({ params }: Props) {
+const VALID_TABS = ["board","chat","calendar","workload","resources","meetings","activity","notes"] as const;
+type Tab = typeof VALID_TABS[number];
+
+export default async function GroupPage({ params, searchParams }: Props) {
   const { groupId } = await params;
+  const { tab: tabParam } = await searchParams;
+  const initialTab: Tab = VALID_TABS.includes(tabParam as Tab) ? (tabParam as Tab) : "board";
   const supabase = await createClient();
   const admin = createAdminClient();
 
@@ -84,6 +90,7 @@ export default async function GroupPage({ params }: Props) {
 
       <GroupWorkspace
         groupId={groupId}
+        initialTab={initialTab}
         rubricSections={rubricSections ?? []}
         initialTasks={tasks ?? []}
         members={memberList}

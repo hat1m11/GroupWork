@@ -29,6 +29,7 @@ interface Props {
   initialResources: ResourceWithUser[];
   initialMeetings: MeetingWithUser[];
   initialCalendarEvents: CalendarEvent[];
+  initialTab?: string;
   overdueTasks: Task[];
 }
 
@@ -72,18 +73,13 @@ const TABS: { id: Tab; label: string }[] = [
 
 export default function GroupWorkspace({
   groupId, rubricSections, initialTasks, members, currentUserId, isOwner,
-  subtaskCounts, initialMessages, initialResources, initialMeetings, initialCalendarEvents, overdueTasks,
+  subtaskCounts, initialMessages, initialResources, initialMeetings, initialCalendarEvents, initialTab, overdueTasks,
 }: Props) {
   const VALID_TABS: Tab[] = ["board", "chat", "calendar", "workload", "resources", "meetings", "activity", "notes"];
-  const [tab, setTab] = useState<Tab>("board");
+  const [tab, setTab] = useState<Tab>(() =>
+    (initialTab && VALID_TABS.includes(initialTab as Tab)) ? (initialTab as Tab) : "board"
+  );
   const [dismissed, setDismissed] = useState(false);
-
-  // Restore tab from URL on mount, and keep URL in sync on change
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const t = params.get("tab") as Tab;
-    if (t && VALID_TABS.includes(t)) setTab(t);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function changeTab(newTab: Tab) {
     setTab(newTab);
