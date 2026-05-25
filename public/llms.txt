@@ -1,0 +1,24 @@
+# GroupWork
+
+> GroupWork is an academic group project management platform built for university students collaborating on assignments.
+
+## What it does
+GroupWork helps student teams organise tasks, communicate in real time, schedule meetings, share resources, and track each member's contributions across a project's lifecycle.
+
+## Core features
+- Kanban task boards with priorities, due dates, subtasks, and status tracking
+- Group chat with @mentions, pinned messages, and threaded replies
+- Shared calendar with meetings, deadlines, and custom events
+- Resource library for Google Docs, PDFs, and links
+- Workload view showing per-member task distribution
+- Contribution log tracking activity across the group
+- Progress metrics tied to rubric weightings
+
+## Who it is for
+University and college students working on group projects and assignments.
+
+## Technology
+Next.js, Supabase (auth + realtime + database), Tailwind CSS, TypeScript, deployed on Vercel.
+
+## Contact
+Source: https://github.com/hat1m11/GroupWork
