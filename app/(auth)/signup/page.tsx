@@ -101,6 +101,7 @@ export default function SignupPage() {
   const [loading,         setLoading]         = useState(false);
   const [serverError,     setServerError]     = useState<string | null>(null);
   const [emailTaken,      setEmailTaken]      = useState(false);
+  const [submitted,       setSubmitted]       = useState(false);
 
   // ── Validation ──
   const nameError = (() => {
@@ -171,19 +172,63 @@ export default function SignupPage() {
       }
     } catch { /* let Supabase handle network errors */ }
 
+    const redirectTo = `${window.location.origin}/auth/callback?next=/dashboard`;
+
     const { error } = await createClient().auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName.trim() } },
+      options: {
+        data: { full_name: fullName.trim() },
+        emailRedirectTo: redirectTo,
+      },
     });
 
     if (error) { setServerError(error.message); setLoading(false); return; }
 
-    router.push("/dashboard");
-    router.refresh();
+    setSubmitted(true);
+    setLoading(false);
   }
 
   const pw = strength(password);
+
+  // ── Email sent screen ──────────────────────────────────────────────────
+  if (submitted) {
+    return (
+      <div className="w-full max-w-[480px]">
+        <div className="rounded-2xl p-8 border text-center" style={{ background: "#111827", borderColor: "#1E2A3A" }}>
+          {/* Icon */}
+          <div className="w-14 h-14 rounded-2xl bg-blue-500/15 border border-blue-500/25 flex items-center justify-center mx-auto mb-5">
+            <svg className="w-7 h-7 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+            </svg>
+          </div>
+
+          <h1 className="text-xl font-bold text-gray-50 mb-2">Check your inbox</h1>
+          <p className="text-sm text-gray-400 mb-1">
+            We sent a confirmation link to
+          </p>
+          <p className="text-sm font-semibold text-blue-400 mb-5 break-all">{email}</p>
+
+          <p className="text-xs text-gray-500 leading-relaxed mb-6">
+            Click the link in the email to activate your account and sign in.
+            The link expires in 24 hours.
+          </p>
+
+          <div className="h-px mb-5" style={{ background: "#1E2A3A" }} />
+
+          <p className="text-xs text-gray-600">
+            Wrong email?{" "}
+            <button
+              onClick={() => { setSubmitted(false); setEmail(""); setLoading(false); }}
+              className="text-blue-400 hover:text-blue-300 transition-colors font-medium"
+            >
+              Go back
+            </button>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-[480px]">
