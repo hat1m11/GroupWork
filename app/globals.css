@@ -183,3 +183,24 @@ html.light .bg-\[\#1E2A3A\]\/50 { background-color: rgba(241,245,249,0.8) !impor
 /* Hide scrollbar utility */
 .scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+/* ── Buttons: pointer cursor + smooth hover fade ── */
+button, [role="button"] {
+  cursor: pointer;
+  transition:
+    background-color 180ms ease,
+    color            180ms ease,
+    border-color     180ms ease,
+    box-shadow       180ms ease,
+    opacity          180ms ease,
+    transform        180ms ease,
+    filter           180ms ease;
+}
+button:disabled, [role="button"][aria-disabled="true"] {
+  cursor: not-allowed;
+}
+/* Buttons with no explicit hover background get a subtle brightness dip */
+button:not(:disabled):not([class*="hover:bg"]):not([class*="hover:text"]):hover,
+[role="button"]:not([aria-disabled="true"]):not([class*="hover:bg"]):not([class*="hover:text"]):hover {
+  filter: brightness(0.88);
+}
