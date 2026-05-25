@@ -101,27 +101,28 @@ export default function GroupWorkspace({
         </div>
       )}
 
-      {/* Tab bar — native scroll, hidden scrollbar */}
+      {/* Tab bar */}
       <div
-        className="flex gap-0 mb-4 border-b overflow-x-auto"
+        className="flex gap-0 mb-0 border-b overflow-x-auto"
         style={{ borderColor: "var(--ct-bd)", scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
       >
         {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => changeTab(t.id)}
-            className={`flex items-center gap-1.5 px-3.5 py-2.5 text-sm font-medium transition-all duration-150 border-b-2 -mb-px whitespace-nowrap flex-shrink-0 rounded-t-md ${
-              tab === t.id
-                ? "border-blue-500 text-blue-400 bg-blue-500/5"
-                : "border-transparent hover:bg-[var(--ct-hi)]"
-            }`}
-            style={tab === t.id ? {} : { color: "var(--ct-t3)" }}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 text-sm font-medium transition-all duration-150 border-b-2 -mb-px whitespace-nowrap flex-shrink-0"
+            style={tab === t.id
+              ? { borderBottomColor: "#6E56CF", color: "#6E56CF", background: "rgba(110,86,207,0.05)" }
+              : { borderBottomColor: "transparent", color: "#71717A" }
+            }
           >
             <TabIcon id={t.id} />
             <span>{t.label}</span>
           </button>
         ))}
       </div>
+      {/* 1px divider under tabs — gives the board surface its own floor */}
+      <div className="mb-5" />
 
       {tab === "board" && (
         <TaskBoard

@@ -34,6 +34,38 @@ const PRIORITY_ACTIVE: Record<Task["priority"], string> = {
 
 const ALL_TAGS = ["research", "writing", "review", "design", "code"];
 
+// ── Toggle switch ──────────────────────────────────────────────────────────
+function ToggleSwitch({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) {
+  return (
+    <label className="flex items-center gap-2 select-none" style={{ cursor: "pointer" }}>
+      <button
+        role="switch"
+        aria-checked={checked}
+        onClick={onChange}
+        className="relative inline-flex rounded-full transition-colors duration-200 flex-shrink-0 border"
+        style={{
+          width: 28, height: 16,
+          background: checked ? "#6E56CF" : "var(--ct-hi)",
+          borderColor: checked ? "#6E56CF" : "var(--ct-bd)",
+        }}
+      >
+        <span
+          className="absolute top-[2px] w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-200"
+          style={{ left: checked ? "calc(100% - 14px)" : 2 }}
+        />
+      </button>
+      <span className="text-xs font-medium" style={{ color: checked ? "var(--ct-t2)" : "var(--ct-t3)" }}>
+        {label}
+      </span>
+    </label>
+  );
+}
+
+// ── Divider ────────────────────────────────────────────────────────────────
+function VDivider() {
+  return <div className="w-px h-4 flex-shrink-0" style={{ background: "var(--ct-bd)" }} />;
+}
+
 export default function TaskBoard({
   groupId, rubricSections, initialTasks, members, currentUserId,
   isOwner = false, subtaskCounts = {},
@@ -112,119 +144,134 @@ export default function TaskBoard({
     .sort((a, b) => sortByPriority ? PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority] : 0);
 
   return (
-    <div className="space-y-8">
-      {/* Toolbar */}
-      <div className="flex items-center gap-2 rounded-xl px-3 py-2 border" style={{ background: "var(--ct-surf)", borderColor: "var(--ct-bd)" }}>
+    <div className="space-y-6">
 
-        {/* Filter dropdown */}
-        <div className="relative" ref={filterRef}>
-          <button
-            onClick={() => setFilterOpen((v) => !v)}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 border ${
-              activeFilterCount > 0
-                ? "border-blue-500/40 text-blue-400 bg-blue-500/10"
-                : "border-[#1E2A3A] text-gray-400 hover:text-gray-200 hover:border-[#2D3F55]"
-            }`}
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
-            </svg>
-            Filters
-            {activeFilterCount > 0 && (
-              <span className="bg-blue-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold leading-none">
-                {activeFilterCount}
-              </span>
+      {/* ── Toolbar ── */}
+      <div
+        className="flex items-center gap-3 flex-wrap rounded-2xl px-3 py-2 border"
+        style={{ background: "var(--ct-surf)", borderColor: "var(--ct-bd)" }}
+      >
+        {/* Left control cluster */}
+        <div className="flex items-center gap-2">
+
+          {/* Filters dropdown */}
+          <div className="relative" ref={filterRef}>
+            <button
+              onClick={() => setFilterOpen((v) => !v)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[6px] text-xs font-medium transition-all border"
+              style={activeFilterCount > 0
+                ? { background: "rgba(110,86,207,0.1)", color: "#6E56CF", borderColor: "rgba(110,86,207,0.35)" }
+                : { background: "transparent", color: "var(--ct-t3)", borderColor: "var(--ct-bd)" }
+              }
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
+              </svg>
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold text-white leading-none" style={{ background: "#6E56CF" }}>
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+
+            {filterOpen && (
+              <div
+                className="absolute top-full left-0 mt-1.5 z-40 rounded-xl shadow-2xl p-4 w-64 border"
+                style={{ background: "var(--ct-nav)", borderColor: "var(--ct-bd)" }}
+              >
+                <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--ct-t3)" }}>Priority</p>
+                <div className="flex flex-wrap gap-1.5 mb-4">
+                  {(["urgent", "high", "medium", "low"] as Task["priority"][]).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setFilterPriority(filterPriority === p ? "" : p)}
+                      className={`px-2.5 py-1 rounded-[6px] text-xs font-medium transition-all border ${
+                        filterPriority === p ? PRIORITY_ACTIVE[p] : ""
+                      }`}
+                      style={filterPriority === p ? {} : { color: "var(--ct-t3)", borderColor: "var(--ct-bd)" }}
+                    >
+                      {p.charAt(0).toUpperCase() + p.slice(1)}
+                    </button>
+                  ))}
+                </div>
+                <div className="h-px mb-3" style={{ background: "var(--ct-bd)" }} />
+                <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--ct-t3)" }}>Labels</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {ALL_TAGS.map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setFilterTag(filterTag === t ? "" : t)}
+                      className="px-2.5 py-1 rounded-[6px] text-xs font-medium transition-all border"
+                      style={filterTag === t
+                        ? { background: "rgba(139,92,246,0.15)", color: "#8B5CF6", borderColor: "rgba(139,92,246,0.3)" }
+                        : { color: "var(--ct-t3)", borderColor: "var(--ct-bd)" }
+                      }
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
+          </div>
+
+          <VDivider />
+
+          {/* Priority sort */}
+          <button
+            onClick={() => setSortByPriority((v) => !v)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[6px] text-xs font-medium transition-all border"
+            style={sortByPriority
+              ? { background: "rgba(110,86,207,0.1)", color: "#6E56CF", borderColor: "rgba(110,86,207,0.35)" }
+              : { background: "transparent", color: "var(--ct-t3)", borderColor: "transparent" }
+            }
+            title="Sort by priority within each column"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 7h18M6 12h12M10 17h4" />
+            </svg>
+            Priority sort
           </button>
 
-          {filterOpen && (
-            <div className="absolute top-full left-0 mt-1.5 z-40 rounded-xl shadow-2xl p-4 w-64 border" style={{ background: "var(--ct-nav)", borderColor: "var(--ct-bd)" }}>
-              <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Priority</p>
-              <div className="flex flex-wrap gap-1.5 mb-4">
-                {(["urgent", "high", "medium", "low"] as Task["priority"][]).map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setFilterPriority(filterPriority === p ? "" : p)}
-                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-150 border ${
-                      filterPriority === p ? PRIORITY_ACTIVE[p] : "border-[#1E2A3A] text-gray-400 hover:text-gray-200 hover:border-[#2D3F55]"
-                    }`}
-                  >
-                    {p.charAt(0).toUpperCase() + p.slice(1)}
-                  </button>
-                ))}
-              </div>
-              <div className="h-px mb-3" style={{ background: "var(--ct-bd)" }} />
-              <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Labels</p>
-              <div className="flex flex-wrap gap-1.5">
-                {ALL_TAGS.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setFilterTag(filterTag === t ? "" : t)}
-                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-150 border ${
-                      filterTag === t
-                        ? "bg-purple-500/15 text-purple-400 border-purple-500/30"
-                        : "border-[#1E2A3A] text-gray-400 hover:text-gray-200 hover:border-[#2D3F55]"
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          <VDivider />
+
+          {/* Hide blocked toggle */}
+          <ToggleSwitch
+            checked={hideBlocked}
+            onChange={() => setHideBlocked((v) => !v)}
+            label="Hide blocked"
+          />
         </div>
 
         {/* Active filter chips */}
         {filterPriority && (
-          <span className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${PRIORITY_ACTIVE[filterPriority]}`}>
+          <span className={`flex items-center gap-1 px-2 py-0.5 rounded-[6px] text-xs font-medium border ${PRIORITY_ACTIVE[filterPriority]}`}>
             {filterPriority}
             <button onClick={() => setFilterPriority("")} className="hover:opacity-70 leading-none">×</button>
           </span>
         )}
         {filterTag && (
-          <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20">
+          <span className="flex items-center gap-1 px-2 py-0.5 rounded-[6px] text-xs font-medium"
+            style={{ background: "rgba(139,92,246,0.1)", color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.2)" }}>
             {filterTag}
             <button onClick={() => setFilterTag("")} className="hover:opacity-70 leading-none">×</button>
           </span>
         )}
 
-        {/* Right: view controls */}
-        <div className="ml-auto flex items-center gap-0.5">
-          {hasAnyActive && (
-            <>
-              <button
-                onClick={clearAll}
-                className="text-xs text-gray-600 hover:text-red-400 transition-colors px-2 py-1"
-              >
-                ✕ Clear
-              </button>
-              <div className="w-px h-4 bg-[#1E2A3A] mx-1" />
-            </>
-          )}
+        {/* Clear */}
+        {hasAnyActive && (
           <button
-            onClick={() => setSortByPriority((v) => !v)}
-            className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all duration-150 ${
-              sortByPriority ? "text-blue-400 bg-blue-500/10" : "text-gray-500 hover:text-gray-300"
-            }`}
-            title="Sort by priority within each column"
+            onClick={clearAll}
+            className="ml-auto text-xs font-medium transition-colors"
+            style={{ color: "var(--ct-t3)" }}
           >
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 7h18M6 12h12M10 17h4" />
-            </svg>
-            Priority sort
+            Clear all
           </button>
-          <button
-            onClick={() => setHideBlocked((v) => !v)}
-            className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all duration-150 ${
-              hideBlocked ? "text-red-400 bg-red-500/10" : "text-gray-500 hover:text-gray-300"
-            }`}
-            title="Toggle blocked task visibility"
-          >
-            {hideBlocked ? "Show blocked" : "Hide blocked"}
-          </button>
-        </div>
+        )}
       </div>
 
+      {/* ── Sections ── */}
       {rubricSections.map((section) => {
         const sectionTasks = visibleTasks.filter((t) => t.rubric_section_id === section.id);
         const doneTasks = sectionTasks.filter((t) => t.status === "done").length;

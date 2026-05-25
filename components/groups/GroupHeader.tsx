@@ -50,7 +50,9 @@ function ShareButton({ code }: { code: string }) {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-gray-200 border border-[#1E2A3A] hover:border-[#2D3F55] rounded-lg px-3 py-1.5 transition-all duration-150"
+        data-share-trigger
+        className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-[6px] border transition-all duration-150"
+        style={{ color: "var(--ct-t3)", borderColor: "var(--ct-bd)" }}
       >
         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
@@ -58,18 +60,20 @@ function ShareButton({ code }: { code: string }) {
         Share
       </button>
       {open && (
-        <div className="absolute right-0 top-9 z-30 bg-gray-900 border border-[#1E2A3A] rounded-xl shadow-xl p-4 w-56">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Invite code</p>
+        <div className="absolute right-0 top-9 z-30 rounded-xl shadow-xl p-4 w-56 border"
+          style={{ background: "var(--ct-nav)", borderColor: "var(--ct-bd)" }}>
+          <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--ct-t3)" }}>Invite code</p>
           <div className="flex items-center gap-2">
-            <span className="flex-1 font-mono text-xl font-bold text-gray-50 tracking-widest">{code}</span>
+            <span className="flex-1 font-mono text-xl font-bold tracking-widest" style={{ color: "var(--ct-t1)" }}>{code}</span>
             <button
               onClick={copy}
-              className="text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors flex-shrink-0"
+              className="text-xs font-semibold transition-colors flex-shrink-0"
+              style={{ color: "#6E56CF" }}
             >
               {copied ? "✓ Copied" : "Copy"}
             </button>
           </div>
-          <p className="text-xs text-gray-600 mt-2">Share this code with teammates to let them join.</p>
+          <p className="text-xs mt-2" style={{ color: "var(--ct-t3)" }}>Share this code with teammates to let them join.</p>
         </div>
       )}
     </div>
@@ -92,27 +96,42 @@ export default function GroupHeader({ group: initial, members, currentUserId, is
     ? Math.ceil((new Date(group.due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
 
+  // ONE merged deadline chip
+  const deadlineChip = (() => {
+    if (daysLeft === null) return null;
+    if (daysLeft < 0) return { label: "Overdue", style: { background: "rgba(239,68,68,0.1)", color: "#F87171" } };
+    if (daysLeft === 0 || (countdown && !countdown.startsWith("0d"))) {
+      // < 24h — precise countdown, red
+      const isUrgent = daysLeft === 0;
+      return {
+        label: countdown ?? "Due today",
+        style: isUrgent
+          ? { background: "rgba(239,68,68,0.1)", color: "#F87171" }
+          : { background: "rgba(245,158,11,0.1)", color: "#FBBF24" },
+      };
+    }
+    if (countdown) {
+      // ≤ 7d — show countdown, amber
+      return { label: countdown, style: { background: "rgba(245,158,11,0.1)", color: "#FBBF24" } };
+    }
+    // > 7d — show days, neutral
+    return { label: `${daysLeft}d left`, style: { background: "var(--ct-hi)", color: "var(--ct-t3)" } };
+  })();
+
   return (
-    <div className="mb-5">
+    <div className="mb-4">
       {/* Top utility bar */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-medium text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span
+            className="text-xs font-semibold px-2.5 py-1 rounded-[6px]"
+            style={{ background: "rgba(110,86,207,0.1)", color: "#6E56CF" }}
+          >
             {group.course_code}
           </span>
-          {daysLeft !== null && (
-            <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-              daysLeft < 0 ? "bg-red-500/10 text-red-400" :
-              daysLeft < 3 ? "bg-red-500/10 text-red-400" :
-              daysLeft < 7 ? "bg-amber-500/10 text-amber-400" :
-              "bg-gray-800 text-gray-500"
-            }`}>
-              {daysLeft > 0 ? `${daysLeft}d left` : daysLeft === 0 ? "Due today" : "Overdue"}
-            </span>
-          )}
-          {countdown && (
-            <span className="text-xs font-mono text-red-400 bg-red-500/10 px-2.5 py-1 rounded-full">
-              ⏱ {countdown}
+          {deadlineChip && (
+            <span className="text-xs font-medium font-mono px-2.5 py-1 rounded-[6px]" style={deadlineChip.style}>
+              {deadlineChip.label}
             </span>
           )}
         </div>
@@ -120,7 +139,8 @@ export default function GroupHeader({ group: initial, members, currentUserId, is
           {isOwner && (
             <button
               onClick={() => setEditOpen(true)}
-              className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-200 border border-[#1E2A3A] hover:border-[#2D3F55] rounded-lg px-3 py-1.5 transition-all duration-150"
+              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-[6px] border transition-all duration-150"
+              style={{ color: "var(--ct-t3)", borderColor: "var(--ct-bd)" }}
               title="Edit group"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -134,11 +154,15 @@ export default function GroupHeader({ group: initial, members, currentUserId, is
       </div>
 
       {/* Group title */}
-      <h1 className="text-3xl font-extrabold text-gray-50 tracking-tight leading-tight">{group.name}</h1>
-      <p className="text-sm text-gray-500 mt-1 font-normal">{group.assignment_name}</p>
+      <h1 className="text-2xl font-bold tracking-tight leading-tight" style={{ color: "var(--ct-t1)" }}>
+        {group.name}
+      </h1>
+      {group.assignment_name && (
+        <p className="text-sm mt-0.5" style={{ color: "var(--ct-t3)" }}>{group.assignment_name}</p>
+      )}
 
       {/* Members */}
-      <div className="mt-4">
+      <div className="mt-3">
         <MembersList
           groupId={group.id}
           members={members}
